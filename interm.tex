@@ -18,15 +18,48 @@
 \section{Introduction}
 \label{sec:intro}
 % 1. Overall description of IGVC
+The Intelligent Ground Vehicle Competition (IGVC) is an international collegiate
+robotics competition that tasks teams of undergraduate students to design,
+build, and program a fully autonomous mobile ground vehicle. Specifically, the
+competition consists of three distinct challenges: navigating through a winding
+obstacle course, travelling between global positioning system (GPS) waypoints in
+large field, and responding to messages broadcast by a Joint Architecture for
+Unmanned Systems (JAUS) control system. In each of these tasks, the team has no
+knowledge of the course prior to competing and navigation is further complicated
+by the addition of road obstacles such as cones, barriers, switchbacks, and
+potholes in the drivable regions of the course.
+
 % 2. Alternatives to vision used by other teams
 % 3. Importance of vision
+Remaining in the course while autonomously navigating around these obstacles
+requires that the robot has accurate knowledge of its location and objects in
+its surrounding environment. Previous competitors have successfully detected
+road obstacles using a combination of scanning laser range finders (LIDAR) and
+stereo reconstruction. Unlike LIDAR, stereo reconstruction is capable of
+providing three-dimensional data for all points in a scene, instead of only
+those that are coplanar with the scanning laser rangefinder. In addition to
+using stereo vision to detetct obstacles, image processing is necessary to
+identify the course's painted boundaries and to locate the flags that are used
+to indicate areas of safe travel.
+
 % 4. Primary vision tasks
+With the importance of computer vision clearly understood, the remainder of this
+paper will discuss specific algorithms designed for use on the Navigator,
+Rutgers Univeristy's entry into the 2011 Intelligent Ground Vehicle Competition.
+Before discussing specific computer vision algorithms Section ~\ref{sec:robot}
+describes the mechanical, sensing, and computing capabilities of the Navigator
+at a high level. Making use of the onboard cameras, Section ~\ref{sec:stereo}
+describes the Navigator's baseline-multiplexing stereo vision system and Section
+~\ref{sec:lane} discusses monocular tracking of boundary lines. Object
+recognition, such as the detection of flags and potholes, is outside the scope
+of this paper and is briefly discussed as future work.
 
 \section{Economics}
 \label{sec:econ}
 % ???
 
 \section{Rutgers Navigator}
+\label{sec:robot}
 % 1. Brief discussion of mechanical design
 % 2. Sensing capabilities
 % 3. Computing capabililities and software architecture
