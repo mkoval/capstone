@@ -1,0 +1,65 @@
+\documentclass[11pt,twocolumn]{article}
+\usepackage{amsmath}
+\usepackage[margin=1in]{geometry}
+\usepackage{graphicx}
+\usepackage{import}
+\usepackage{subfig}
+
+\title{Vision-Based Autonomous Ground Vehicle Navigation}
+\date{}
+\author{
+	Michael Koval \\
+	mkoval@eden.rutgers.edu
+}
+
+\begin{document}
+\maketitle
+
+\section{Introduction}
+\label{sec:intro}
+% 1. Overall description of IGVC
+% 2. Alternatives to vision used by other teams
+% 3. Importance of vision
+% 4. Primary vision tasks
+
+\section{Economics}
+\label{sec:econ}
+% ???
+
+\section{Rutgers Navigator}
+% 1. Brief discussion of mechanical design
+% 2. Sensing capabilities
+% 3. Computing capabililities and software architecture
+% 4. Integration of vision with path planning (i.e. costmaps)
+
+\section{Stereo Reconstruction}
+\label{sec:stereo}
+% 1. Selection of the PS3 Eye camera
+% 2. Hardware and software camera synchronization
+% 3. Baseline, resolution, and framerate selection
+% 4. Baseline multiplexing using three cameras
+% 5. Point correspondances: SSD BM on the CPU or SAD BM on the GPU?
+% 6. Integration with global cost map
+
+\section{Lane Tracking}
+\label{sec:lane}
+% 1. Problems with other teams' approaches
+% 2. Color space transformation, ground plane assumption
+% 3. Creating and using a matched pulse-width filter (!)
+% 4. Non-maximal supression (!)
+% 5. Model fitting?
+% 6. Lane width inference?
+
+\section{Conclusion}
+\label{sec:conclusion}
+% ???
+
+\section{Future Work}
+\label{sec:future}
+% 1. Further analysis of GPU-accelerated stereo
+% 2. Stereo and/or IMU-based ground plane detection
+% 4. Use stereo depth information to mask line false positives
+% 3. Basic object recognition for flags, potholes, and road obstacles
+% 4. Extensive testing in a software simulation (Gazebo)
+
+\end{document}
