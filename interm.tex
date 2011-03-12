@@ -66,7 +66,7 @@ of this paper and is briefly discussed as future work.
 
 \begin{figure}
 	\centering
-	\includegraphics[width=\columnwidth]{figures/navigator-cad}
+	\includegraphics[width=\columnwidth]{include/navigator-cad}
 	\caption{CAD render of the Navigator.}
 	\label{fig:robot-cad}
 \end{figure}
@@ -105,38 +105,43 @@ desynchronization, it is impossible to compensate for its effects.
 \begin{figure*}
 	\centering
 	\subfloat[Unsynchronized \texttt{VSYNC}]{
-		\includegraphics[width=0.24\textwidth]{figures/unsync-scope}
+		\includegraphics[width=0.24\textwidth]{include/unsync-scope}
+		\label{fig:stereo-sync-hard1}
 	}
 	\subfloat[Synchronized \texttt{VSYNC}]{
-		\includegraphics[width=0.24\textwidth]{figures/sync-scope}
+		\includegraphics[width=0.24\textwidth]{include/sync-scope}
+		\label{fig:stereo-sync-hard2}
 	}
 	\subfloat[Unsynchronized Frames]{
-		\includegraphics[width=0.24\textwidth]{figures/unsync-img}
+		\includegraphics[width=0.24\textwidth]{include/unsync-img}
+		\label{fig:stereo-sync-soft1}
 	}
 	\subfloat[Synchronized Frames]{
-		\includegraphics[width=0.24\textwidth]{figures/sync-img}
+		\includegraphics[width=0.24\textwidth]{include/sync-img}
+		\label{fig:stereo-sync-soft2}
 	}
 	\caption{
 		Verification of hardware and software camera synchronization for two
 		Playstation Eye cameras. Note how only the synchronized cameras share a
-		common \texttt{VSYNC} clock (left) and capture identical readings of a
-		millisecond resolution timer (right).
+		common \texttt{VSYNC} clock and capture identical readings of a
+		millisecond resolution timer.
 	}
-	\label{fig:stereo-sync-hard}
+	\label{fig:stereo-sync}
 \end{figure*}
 
 Hardware synchronization was achieved by  shorting the frame clock
 (\texttt{VSYNC}) of the ``master'' camera to the frame trigger inputs
 (\texttt{FSIN}) of the ``slave'' cameras. For electrical safety, each of the
-cameras' USB grounds were shorted to force a common ground. This synchronization
-guarantees that the cameras capture images simultaneously, but does not
-guarantee that the images will be synchronized after the USB transfers to the
-computers. Making direct use of the Video4Linux kernel module, software
+cameras' USB grounds were shorted to force a common ground. This
+synchronization guarantees that the cameras capture images simultaneously, but
+does not guarantee that the images will be synchronized after the USB transfers
+to the computers. Making direct use of the Video4Linux kernel module, software
 synchronization was achived by fuzzy-matching of the the USB transfer
 timestamps. Synchronization was verified in hardware by probing each camera's
-\texttt{VSYNC} pin with an osilloscope (Figure ~\ref{fig:stereo-sync-hard}) and 
-and in software by recording images of a millisecond-resolution timer (Figure
-~\ref{fig:stereo-sync-soft}).
+\texttt{VSYNC} pin with an osilloscope (Figures ~\ref{fig:stereo-sync-hard1}
+and ~\ref{fig:stereo-sync-hard2}) and and in software by recording images of a
+millisecond-resolution timer (Figures ~\ref{fig:stereo-sync-soft1} and
+~\ref{fig:stereo-sync-soft2}).
 
 % 3. Baseline multiplexing using three cameras
 % FIGURE: Effect of baseline on dead zone and maximum range.
@@ -149,10 +154,17 @@ best baseline is a balance of two opposing, but equally important, factors:
 dead-zone and range. Decreasing the baseline shrinks the both the size of the
 deadzone and the maximum range at which distances can be distinguished. This
 maximum range exists because disparity is measured in pixels: there is no
-discernable difference between any disparity less than one pixel. Using the
-camera's intrinsic matrix, $M_{int}$, the maximum reconstructed distance is
-\begin{equation*}
-\end{equation*}
+discernable difference between any disparity less than one pixel.
+
+\begin{figure}
+	\subimport{include/}{dist-disparity}
+	\caption{
+		Relationship between real-world distance and image disparity for
+		10 cm and 20 cm baselines. Note that the 20 cm baseline has a maximum
+		range approximately twice that of the 10 cm baseline.
+	}
+	\label{fig:stereo-dist-disparity}
+\end{figure}
 
 Analysis of previous year's competitions and considering the 20 foot width of
 the navigation course, a point cloud that is useful for navigation would need
