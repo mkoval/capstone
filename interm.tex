@@ -102,20 +102,28 @@ by up to 7 cm.} that was used when stationary. As the change in the system's
 baseline is a function of both the robot's velocity and the extent of the
 desynchronization, it is impossible to compensate for its effects.
 
-\begin{figure}
+\begin{figure*}
 	\centering
 	\subfloat[Unsynchronized \texttt{VSYNC}]{
-		\includegraphics[width=0.47\columnwidth]{figures/unsync-scope}
+		\includegraphics[width=0.24\textwidth]{figures/unsync-scope}
 	}
 	\subfloat[Synchronized \texttt{VSYNC}]{
-		\includegraphics[width=0.47\columnwidth]{figures/sync-scope}
+		\includegraphics[width=0.24\textwidth]{figures/sync-scope}
+	}
+	\subfloat[Unsynchronized Frames]{
+		\includegraphics[width=0.24\textwidth]{figures/unsync-img}
+	}
+	\subfloat[Synchronized Frames]{
+		\includegraphics[width=0.24\textwidth]{figures/sync-img}
 	}
 	\caption{
-		Hardware synchronization on cameras clocks. Note that unsynchronized
-		cameras are out of phase.
+		Verification of hardware and software camera synchronization for two
+		Playstation Eye cameras. Note how only the synchronized cameras share a
+		common \texttt{VSYNC} clock (left) and capture identical readings of a
+		millisecond resolution timer (right).
 	}
 	\label{fig:stereo-sync-hard}
-\end{figure}
+\end{figure*}
 
 Hardware synchronization was achieved by  shorting the frame clock
 (\texttt{VSYNC}) of the ``master'' camera to the frame trigger inputs
@@ -141,11 +149,14 @@ best baseline is a balance of two opposing, but equally important, factors:
 dead-zone and range. Decreasing the baseline shrinks the both the size of the
 deadzone and the maximum range at which distances can be distinguished. This
 maximum range exists because disparity is measured in pixels: there is no
-discernable difference between any disparity less than one pixel.
+discernable difference between any disparity less than one pixel. Using the
+camera's intrinsic matrix, $M_{int}$, the maximum reconstructed distance is
+\begin{equation*}
+\end{equation*}
 
 Analysis of previous year's competitions and considering the 20 foot width of
 the navigation course, a point cloud that is useful for navigation would need
-require a deadzone no larger than 2 feet and maximum that is at least 25 feet.
+require a deadzone no larger than 2 feet and maximum that is at least 25 feet. Using the
 % TODO: Focal length analysis.
 % TODO: Baseline and resolution selection.
 
@@ -184,6 +195,6 @@ Knotts Corporation, 80/20 Inc., Optima Batteries, Github, and IEEE Region 1.
 This project would also not be possible without the assistance provided by
 Professor Kristin Dana, Steve Orbine, and John Scafidi of the Department of
 Electrical and Computer Engineering and Joe Lippencott with the Department of
-Industiral and Systems Engineering..
+Industiral and Systems Engineering.
 
 \end{document}
