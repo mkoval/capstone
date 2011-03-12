@@ -66,6 +66,7 @@ of this paper and is briefly discussed as future work.
 
 \begin{figure}
 	\centering
+	% TODO: Replace this with an actual photo.
 	\includegraphics[width=\columnwidth]{include/navigator-cad}
 	\caption{CAD render of the Navigator.}
 	\label{fig:robot-cad}
@@ -137,7 +138,8 @@ synchronization guarantees that the cameras capture images simultaneously, but
 does not guarantee that the images will be synchronized after the USB transfers
 to the computers. Making direct use of the Video4Linux kernel module, software
 synchronization was achived by fuzzy-matching of the the USB transfer
-timestamps. Synchronization was verified in hardware by probing each camera's
+timestamps\footnote{\texttt{https://github.com/mkoval/stereo\_webcam}}.
+Synchronization was verified in hardware by probing each camera's
 \texttt{VSYNC} pin with an osilloscope (Figures ~\ref{fig:stereo-sync-hard1}
 and ~\ref{fig:stereo-sync-hard2}) and and in software by recording images of a
 millisecond-resolution timer (Figures ~\ref{fig:stereo-sync-soft1} and
@@ -154,7 +156,9 @@ best baseline is a balance of two opposing, but equally important, factors:
 dead-zone and range. Decreasing the baseline shrinks the both the size of the
 deadzone and the maximum range at which distances can be distinguished. This
 maximum range exists because disparity is measured in pixels: there is no
-discernable difference between any disparity less than one pixel.
+discernable difference between any disparity less than one pixel. Multiplexing
+between a 10 cm baseline (the \textit{narrow stereo}) and a 20 cm baseline (the
+\textit{wide stereo}) combines the benefits of both baselines.
 
 \begin{figure}
 	\subimport{include/}{dist-disparity}
@@ -166,11 +170,19 @@ discernable difference between any disparity less than one pixel.
 	\label{fig:stereo-dist-disparity}
 \end{figure}
 
-Analysis of previous year's competitions and considering the 20 foot width of
-the navigation course, a point cloud that is useful for navigation would need
-require a deadzone no larger than 2 feet and maximum that is at least 25 feet. Using the
-% TODO: Focal length analysis.
-% TODO: Baseline and resolution selection.
+For a stereo camera, the relationship between distance and disparity can be
+shown to be
+\begin{equation*}
+	x = \frac{bf}{n\sigma}
+\end{equation*}
+where $b$ is the baseline, $f$ is the camera's focal distance, and $\sigma$ is
+the size of a pixel on the image sensor. By substituting the intrinsics
+parameters of the Playstation Eye camera\footnote{$f = 3.15$ mm, $\sigma = 6$
+$\mu$m} and setting $n = 1$ pixel, the maximum range of both baselines can be
+evaluated. As can be seen in Figure ~\ref{fig:stereo-dist-disparity}, the 10 cm
+and 20 cm baselines have theoretical maximum ranges of 5 m and 10 m
+respectively. With the width of the course fixed at approximately 6 m, a
+maximum range of 10 m is more than sufficient for navigation purposes.
 
 % 5. Point correspondances: SSD BM on the CPU or SAD BM on the GPU?
 % 6. Software integration and cost map generation
