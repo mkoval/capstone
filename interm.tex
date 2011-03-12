@@ -185,6 +185,17 @@ respectively. With the width of the course fixed at approximately 6 m, a
 maximum range of 10 m is more than sufficient for navigation purposes.
 
 % 5. Point correspondances: SSD BM on the CPU or SAD BM on the GPU?
+\subsection{Reconstruction Algorithm}
+\label{sec:stereo-correspond}
+Due to the use of ROS as the basis for the Navigator's software architecture
+(Section ~\ref{sec:robot}), the actual stereo reconstruction is done using the
+standard \texttt{stereo\_image\_proc} ROS node. This node implements real-time
+calibrated stereo by rectifying the images, applying a series of
+texture-enhancing filters, and using a highly optimized sum-of-squared
+difference (SSD) block-matching algorithm to point correspondences. This
+disparity map is then converted into a three-dimensional point cloud in the
+cameras' coordinate frame using the calibration parameters.
+
 % 6. Software integration and cost map generation
 
 \section{Lane Tracking}
