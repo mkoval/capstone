@@ -1,5 +1,5 @@
 set output "include/dist-disparity.tex"
-set terminal epslatex
+set terminal epslatex size 3.4 in, 1.9 in
 
 set xrange [ 0 : 10 ]
 set yrange [ 1 : 35 ]
