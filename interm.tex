@@ -255,6 +255,24 @@ per row, dramatically improving the algorithm's practical performance.
 % FIGURE: Graph of the pulse-width filter.
 % FIGURE: Output of the pulse-width filter.
 
+% 3. Non-maximal Supression
+\subsection{Non-Maximal Suppresion}
+\label{sec:line-nonmax}
+The matched pulse-width filter is extremely effective at isolating the line in
+the image, but does not produce a clean enough output to be directly used for
+model-fitting. In particular, the nature of digital filters guarantees that
+there will be weak, spurious responses near true positives.
+
+Inspired by Canny edge detection, non-maximal supression is an effective and
+computationally efficient way of reducing such a response to a single point.
+Considering the rows of the horizontally filtered image and the columns of the
+vertically filtered image, a pixel is considered a maximum if and only if it
+has a higher filter response than both of its neighbors. The maxima are then
+thresholded to discard those that do not exhibit a sufficiently strong filter
+response. This threshold was tuned to favor false positives and was set to
+approximately 15\% of the filter's maximum response.
+
+% TODO: Output of non-maximal suppression.
 \section{Conclusion}
 \label{sec:conclusion}
 % ???
