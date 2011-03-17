@@ -206,6 +206,54 @@ cameras' coordinate frame using the calibration parameters.
 % 4. Non-maximal supression (!)
 % 5. Model fitting?
 % 6. Lane width inference?
+% 2. Creating and using a matched pulse-width filter (!)
+\subsection{Matched Pulse-Width Filter}
+Because the lines on the course are known to be uniformly three inches wide, an
+obvious approach for isolating them from other objects is to use a digital
+\textit{pulse-width filter} that is of the same width. Unfortunately, the
+effects of perspective projection mean that the apparent width of lines in the
+image depend upon their distance from the camera. To obtain useful output, such
+a filter must be properly \textit{matched} to expected width of the line at
+each point in the image.
+
+Calculating this width requires knowledge of the three-dimensional point
+corresponding to each pixel in the image. Assuming that the ground plane is
+known and is parameterized by point $P$ and normal $n$, the three-dimensional
+point $P$ that corresponds to pixel $p$ satisifes both
+\begin{align*}
+	(P - P_0) \cdot n     &= 0 \\
+	\lambda M^{-1}_{int} p - P &= 0,
+\end{align*}
+where $M_{int}$ is the camera's intrinsic matrix and $\lambda$ is an arbitrary
+constant.
+
+Solving for $\lambda$ results in a closed-form expression containing
+only known parameters. Substituting this value into the equation of the
+line yields an intersection point of
+\begin{equation*}
+ 	P = \left(\frac{n \cdot P_0}{n \cdot M^{-1}_{int} p}\right) M^{-1}_{int} p.
+	\label{eq:line-point}
+\end{equation*}
+Using the new-found knowledge of point $P$, the pixel-width of the pulse-width
+filter matched to pixel $p$ can easily be computed as
+\begin{equation*}
+	w = ||M_{int} P - M_{int} (P + W)||_2
+\end{equation*}
+where $W$ is a vector in direction $\langle 1, 0 \rangle$ of the same width as
+the line and $|| \cdot ||_2$ denotes the Euclidean norm. Note that this is not
+equivalent to $||W||_2$ because of the division implicit in the use of
+homogeneous coordinates.
+
+Once the expected width of the line at a given pixel is determined, seperate
+horizontal and vertical pulse-width filters are created. Each of these filters
+consists of a positive \textit{pulse} of width $w$ surrounded on both sides by
+negative \textit{supports} of width $\frac{w}{2}$, normalized to have a zero
+sum. When implemented, a rectified input image was used to guarantee that depth
+does not vary within a row of pixels. This allows one filter to be pre-computed
+per row, dramatically improving the algorithm's practical performance.
+
+% FIGURE: Graph of the pulse-width filter.
+% FIGURE: Output of the pulse-width filter.
 
 \section{Conclusion}
 \label{sec:conclusion}
