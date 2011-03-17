@@ -55,8 +55,8 @@ describes the Navigator's baseline-multiplexing stereo vision system and Section
 recognition, such as the detection of flags and potholes, is outside the scope
 of this paper and is briefly discussed as future work.
 
-\section{Economics}
-\label{sec:econ}
+%\section{Economics}
+%\label{sec:econ}
 % ???
 
 \section{Rutgers Navigator}
@@ -67,6 +67,8 @@ of this paper and is briefly discussed as future work.
 % 2. Sensing capabilities
 % 3. Computing capabililities and software architecture
 % 4. Integration of vision with path planning (i.e. costmaps)
+% 5. Gazebo Simulation
+% FIGURE: Photo of simulated environment
 
 \section{Stereo Reconstruction}
 \label{sec:stereo}
@@ -140,6 +142,7 @@ millisecond-resolution timer (Figures ~\ref{fig:stereo-sync-soft1} and
 % 3. Baseline multiplexing using three cameras
 % FIGURE: Effect of baseline on dead zone and maximum range.
 % FIGURE: Graph of distance vs. disparity for both baselines.
+% FIGURE: Graph of distance vs. error for both baselines.
 \subsection{Baseline Multiplexing}
 \label{sec:stereo-mux}
 While unknown changes in the system's baseline is disasterous, having control
@@ -177,6 +180,8 @@ respectively. With the width of the course fixed at approximately 6 m, a
 maximum range of 10 m is more than sufficient for navigation purposes.
 
 % 5. Point correspondances: SSD BM on the CPU or SAD BM on the GPU?
+% TODO: Sample reconstructed point cloud
+% TODO: Discussion of parameter selection
 \subsection{Reconstruction Algorithm}
 \label{sec:stereo-correspond}
 Due to the use of ROS as the basis for the Navigator's software architecture
@@ -188,16 +193,13 @@ difference (SSD) block-matching algorithm to point correspondences. This
 disparity map is then converted into a three-dimensional point cloud in the
 cameras' coordinate frame using the calibration parameters.
 
-% 6. Software integration and cost map generation
+% 6. Obstacle Detection and Cost Map Integration
+% TODO: Actually implement this...
 
 \section{Lane Tracking}
 \label{sec:lane}
-% 1. Problems with other teams' approaches
-% 2. Color space transformation, ground plane assumption
-% 3. Creating and using a matched pulse-width filter (!)
-% 4. Non-maximal supression (!)
-% 5. Model fitting?
-% 6. Lane width inference?
+% 1. Color space transformation
+
 % 2. Creating and using a matched pulse-width filter (!)
 \subsection{Matched Pulse-Width Filter}
 Because the lines on the course are known to be uniformly three inches wide, an
@@ -265,17 +267,24 @@ response. This threshold was tuned to favor false positives and was set to
 approximately 15\% of the filter's maximum response.
 
 % TODO: Output of non-maximal suppression.
+
+% 4. Model Fitting
+\subsection{Model Fitting}
+\label{sec:line-model}
+% TODO: Actually implement this...
+% FIGURE: Output of model fitting.
+
 \section{Conclusion}
 \label{sec:conclusion}
 % ???
 
 \section{Future Work}
 \label{sec:future}
-% 1. Further analysis of GPU-accelerated stereo
+% 1. Obstacle detection using the stereo point cloud
 % 2. Stereo and/or IMU-based ground plane detection
 % 4. Use stereo depth information to mask line false positives
 % 3. Basic object recognition for flags, potholes, and road obstacles
-% 4. Extensive testing in a software simulation (Gazebo)
+% ?. GPU-accelerated stereo
 
 \section{Acknowledgements}
 % TODO: Make this phrasing less awkward.
