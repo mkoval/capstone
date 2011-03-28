@@ -1,4 +1,4 @@
-TARGET  = interm
+TARGET  = interim
 FIGURES = sync-img.eps                \
           unsync-img.eps              \
           sync-scope.eps              \
