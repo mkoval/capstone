@@ -1,0 +1,72 @@
+digraph G {
+	size    = "12.0,8.0";
+
+	node [
+		shape    = "box",
+		style    = "rounded",
+		fontname = "Helvetica"
+	];
+
+	subgraph planning {
+		node [ color = blue ];
+
+		costmap_aggregator  [ label = "Cost Map"          ];
+		global_planner      [ label = "Global Planner"    ];
+		local_planner       [ label = "Local Planner"     ];
+	}
+
+	subgraph control {
+		node [ color = green ];
+
+		imu_driver          [ label = "IMU"               ];
+		gps_driver          [ label = "GPS"               ];
+		motor_state         [ label = "Encoders"          ];
+		robot_state         [ label = "Robot State"       ];
+	}
+
+	subgraph vision {
+		node [ color = red ];
+
+		camera_left         [ label = "Left Camera"       ];
+		camera_center       [ label = "Center Camera"     ];
+		camera_right        [ label = "Right Camera"      ];
+		camera_sync         [ label = "Synchronizer"      ];
+		narrow_stereo_proc  [ label = "Narrow Stereo"     ];
+		wide_stereo_proc    [ label = "Wide Stereo"       ];
+		line_detection_proc [ label = "Line Detector"     ];
+		line_tracking_proc  [ label = "Line Tracker"      ];
+		obj_recog_proc      [ label = "Object Classifier" ];
+	}
+
+	motor_driver            [ label = "Motors"            ];
+
+	// Planning
+	costmap_aggregator  -> global_planner;
+	global_planner      -> local_planner;
+	local_planner       -> motor_driver;
+
+	// Control
+	imu_driver          -> robot_state;
+	gps_driver          -> robot_state;
+	motor_state         -> robot_state;
+	robot_state         -> global_planner;
+	robot_state         -> local_planner;
+
+	// Stereo
+	camera_left         -> camera_sync;
+	camera_center       -> camera_sync;
+	camera_right        -> camera_sync;
+	camera_sync         -> narrow_stereo_proc;
+	camera_sync         -> wide_stereo_proc;
+	narrow_stereo_proc  -> costmap_aggregator;
+	wide_stereo_proc    -> costmap_aggregator;
+
+	// Lane Tracking
+	camera_right        -> line_detection_proc;
+	line_detection_proc -> line_tracking_proc;
+	line_tracking_proc  -> costmap_aggregator;
+
+	// Object Recognition
+	camera_right        -> obj_recog_proc;
+	obj_recog_proc      -> costmap_aggregator;
+}
