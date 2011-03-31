@@ -310,6 +310,7 @@ coordinate frame and are directly used for navigation ~\cite{huang_thesis}
 \end{figure*}
 
 \subsection{Color Space Transformation}
+\label{sec:line-color}
 Using \textit{a priori} knowledge that the lines are white, the first step
 towards effectively isolating them from their surroundings is to convert the
 rectified color image into a monochromatic color space where white is
@@ -323,6 +324,7 @@ y)$, define the pre-processed image $I_{pre}$ to be
 for each pixel $(x, y)$ in $I_{orig}$.
 
 \subsection{Matched Pulse-Width Filter}
+\label{sec:line-filter}
 Because the lines on the course are known to be uniformly three inches wide, an
 obvious approach for isolating them from other objects is to use a digital
 \textit{pulse-width filter} that is of the same width. Unfortunately, the
@@ -359,9 +361,6 @@ where $\delta$ is the image distance corresponding to a change in world
 coordinates by the vector $\Delta$ and $||\cdot||_2$ denotes the Euclidean
 norm. Note that this is not equivalent to $||M_{int}\Delta||_2$ because of the
 division implicit in the use of homogeneous coordinates.
-
-Using this definition of distance, a pulse-width filter is constructed of the
-form depicted in Figure ~\ref{fig:line-filter}.
 
 \begin{figure}
 	\centering
