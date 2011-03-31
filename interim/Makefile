@@ -6,6 +6,7 @@ FIGURES =                             \
           unsync-img.eps              \
           sync-scope.eps              \
           unsync-scope.eps            \
+          robot-photo.eps             \
           stereo-dist.eps             \
           stereo-both.eps             \
           line-orig.eps               \

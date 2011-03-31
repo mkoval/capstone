@@ -10,15 +10,15 @@ digraph G {
 	subgraph vision {
 		node [ color = black ];
 
-		camera_left         [ label = "Left Camera"       ];
-		camera_center       [ label = "Center Camera"     ];
-		camera_right        [ label = "Right Camera"      ];
-		camera_sync         [ label = "Synchronizer"      ];
-		narrow_stereo_proc  [ label = "Narrow Stereo"     ];
-		wide_stereo_proc    [ label = "Wide Stereo"       ];
-		line_detection_proc [ label = "Line Detector"     ];
-		line_tracking_proc  [ label = "Line Tracker"      ];
-		obj_recog_proc      [ label = "Object Classifier" ];
+		camera_left         [ label = "Left Camera"        ];
+		camera_center       [ label = "Center Camera"      ];
+		camera_right        [ label = "Right Camera"       ];
+		camera_sync         [ label = "Synchronizer"       ];
+		narrow_stereo_proc  [ label = "Narrow Stereo"      ];
+		wide_stereo_proc    [ label = "Wide Stereo"        ];
+		line_detection_proc [ label = "Line Detector"      ];
+		line_tracking_proc  [ label = "Line Tracker"       ];
+		obj_recog_proc      [ label = "Object Recognition" ];
 	}
 
 	// Stereo
