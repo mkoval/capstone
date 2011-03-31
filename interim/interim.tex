@@ -56,11 +56,10 @@ in robotic disaster recovery systems.
 Designed specifically for rugged outdoor use and modularity, the Rutgers
 Navigator is constructed entirely out of 80/20 extrusion and custom-machined
 alumninum stock. This provides a strong, light\footnote{Approximately 100 lb
-empty and 150 lb fully loaded.} frame that is much
-easier to modify than a welded steel frame. This frame is supported by three
-wheels: two powered front wheels mounted on a wish bone suspension and
-free-spinning rear castor selected to reduce friction when turning via
-differential drive.
+empty and 150 lb fully loaded.} frame that is much easier to modify than a
+welded steel frame. This frame is supported by three wheels: two powered front
+wheels mounted on a wish bone suspension and free-spinning rear castor selected
+to reduce friction when turning via differential drive.
 
 \begin{figure}
 	\center
@@ -127,33 +126,21 @@ to simulate real potholes.} and flags.
 % FIGURE: Photo of simulated environment
 % TODO: maybe...
 
-\section{Stereo Reconstruction}
+\section{Stereo Vision}
 \label{sec:stereo}
-% 1. Selection of the PS3 Eye camera
-Stereo vision on a mobile robot is a non-trivial problem that has traditionally
-required costly hardware that support high frame rates and hardware
-synchornization, such as the Bumblebee stereo vision camera. Thankfully, the
-inexpensive Playstation Eye camera uses the OmniVision OV7720 capable of frame
-rates up to 125 Hz and can be easily modified to support hardware
-synchronization. Mounted in a custom polycarbinate case (Figure
-~\ref{fig:sec:stereo-camera}), three of these cameras are used for stereo
-reconstruction.
+% TODO: Comparison with Hokoyu
 
-% 2. Hardware and software camera synchronization
-% FIGURE: Justification for synchronization
-% FIGURE: Synchronized and desynchronized osilloscope output
-% FIGURE: Synchronized and desynchronized images of a clock
 \subsection{Synchronization}
 \label{sec:stereo-sync}
-Even if the cameras used for stereo reconstruction are attached to the same
-computer and set to the same frame rate, there is no guarantee that frames will
-be captured simultaeously from both cameras. If the cameras are in motion (such
-as being attached to a moving robot) this delay changes the effective baseline
-of the stereo system and invalidates the camera calibration\footnote{Assuming a
-framerate of 30 Hz and a velocity of 10 mph, the effective baseline could change
-by up to 7 cm.} that was used when stationary. As the change in the system's
-baseline is a function of both the robot's velocity and the extent of the
-desynchronization, it is impossible to compensate for its effects.
+Stereo vision on a mobile robot is a non-trivial problem that has traditionally
+required custom machine vision software with two or more hardware-synchronized
+cameras. Because stereo reconstruction assumes that the images from each camera
+are captured of a fixed scene from multiple viewpoints, any motion that occurs
+between the cameras capturing frames is disasterous. This motion would would
+invalidate the system's extrinsic calibration\footnote{Capturing images at 30
+Hz while moving at 10 mph could change the baseline by up to 7 cm.}, causing
+the quality of the rectification to decrease and the distances to be distorted
+by the robot's velocity ~\cite{unsync}.
 
 \begin{figure*}
 	\centering
@@ -182,36 +169,41 @@ desynchronization, it is impossible to compensate for its effects.
 	\label{fig:stereo-sync}
 \end{figure*}
 
-Hardware synchronization was achieved by  shorting the frame clock
-(\texttt{VSYNC}) of the ``master'' camera to the frame trigger inputs
-(\texttt{FSIN}) of the ``slave'' cameras. For electrical safety, each of the
-cameras' USB grounds were shorted to force a common ground. This
-synchronization guarantees that the cameras capture images simultaneously, but
-does not guarantee that the images will be synchronized after the USB transfers
-to the computers. Making direct use of the Video4Linux kernel module, software
-synchronization was achived by fuzzy-matching of the the USB transfer
-timestamps\footnote{\texttt{https://github.com/mkoval/stereo\_webcam}}.
-Synchronization was verified in hardware by probing each camera's
-\texttt{VSYNC} pin with an osilloscope (Figures ~\ref{fig:stereo-sync-hard1}
-and ~\ref{fig:stereo-sync-hard2}) and and in software by recording images of a
-millisecond-resolution timer (Figures ~\ref{fig:stereo-sync-soft1} and
-~\ref{fig:stereo-sync-soft2}).
+Hardware synchronization is traditionally limited to specialized machine vision
+cameras, such as the Bumblebee2 Stereoscopic Camera. Thankfully, the
+inexpensive Playstation Eye camera is built on the OmniVision OV7720 chipset,
+which can be hardware-synchronized using the exposed frame clock input
+(\texttt{FSIN}) and output (\texttt{VSYNC}) pins ~\cite{omnivision}. By shorting
+one camera's (the \textit{master}) \texttt{VSYNC} pin to the other cameras'
+(the \textit{slaves}) \texttt{FSIN} pins, the cameras are forced to share a
+common clock. To reduce the risk of damaging the cameras, each of the cameras
+was also modified to share a common ground.
 
-% 3. Baseline multiplexing using three cameras
-% FIGURE: Effect of baseline on dead zone and maximum range.
-% FIGURE: Graph of distance vs. disparity for both baselines.
-% FIGURE: Graph of distance vs. error for both baselines.
+This synchronization guarantees that the cameras capture images simultaneously,
+but does not guarantee that the images will be synchronized after the USB
+transfers to the computer. Making direct use of the Video4Linux kernel module,
+software synchronization was achived by fuzzy-matching of the the USB transfer
+timestamps\footnote{\texttt{https://github.com/mkoval/stereo\_webcam}}.
+Hardware synchronization was verified by probing each camera's \texttt{VSYNC}
+pin with an osilloscope (Figures ~\ref{fig:stereo-sync-hard1} and
+~\ref{fig:stereo-sync-hard2}) and confirming that all three clocks were in
+phase. The software synchronizaton was additionally verified by simultaneously
+capturing images of a millisecond resolution timer. Mounted in a custom
+polycarbonate case, three of these hardware-synchronized Playstation Eye
+cameras serve as the backbone of the Navigator's trinocular vision system.
+
 \subsection{Baseline Multiplexing}
 \label{sec:stereo-mux}
-While unknown changes in the system's baseline is disasterous, having control
-over the stereo camera's baseline can be extremely beneficial. Selecting the
-best baseline is a balance of two opposing, but equally important, factors:
-dead-zone and range. Decreasing the baseline shrinks the both the size of the
-deadzone and the maximum range at which distances can be distinguished. This
-maximum range exists because disparity is measured in pixels: there is no
-discernable difference between any disparity less than one pixel. Multiplexing
-between a 10 cm baseline (the \textit{narrow stereo}) and a 20 cm baseline (the
-\textit{wide stereo}) combines the benefits of both baselines.
+Selecting the optimal baseline for a stereo system is a balance of two
+opposing, but equally important, factors: field of view and precision.
+Decreasing the baseline increases the shared field of view of the two cameras,
+at the cost of less precise distance measurements. Conversely, increasing the
+baseline trades a decrease in the system's field of view for better precision
+and a longer range. Rapidly alternating between two different baselines, or
+\textit{baseline multiplexing}, is a simple technique of combining the
+advantages of both small and large baselines. Using the trinocular Bumblebee3
+Stereoscopic Camera as a model, the \textit{narrow stereo} baseline was set to
+10 cm and the \textit{wide stereo} baseline was set to 20 cm.
 
 \begin{figure*}
 	\centering
@@ -226,39 +218,41 @@ between a 10 cm baseline (the \textit{narrow stereo}) and a 20 cm baseline (the
 		camera's rectification and reconstruction accuracy cause a small
 		rotation in the reconstructed point cloud.
 	}
+	\label{fig:stereo-dist}
 \end{figure*}
 
-For a stereo camera, the relationship between distance and disparity can be
-shown to be
-\begin{equation*}
-	x = \frac{bf}{n\sigma}
-\end{equation*}
-where $b$ is the baseline, $f$ is the camera's focal distance, and $\sigma$ is
-the size of a pixel on the image sensor. By substituting the intrinsics
-parameters of the Playstation Eye camera\footnote{$f = 3.15$ mm, $\sigma = 6$
-$\mu$m} and setting $n = 1$ pixel, the maximum range of both baselines can be
-evaluated. As can be seen in Figure ~\ref{fig:stereo-dist-disparity}, the 10 cm
-and 20 cm baselines have theoretical maximum ranges of 5 m and 10 m
-respectively. With the width of the course fixed at approximately 6 m, a
-maximum range of 10 m is more than sufficient for navigation purposes.
+After calibrated with the ROS \texttt{camera\_calibration} package, the
+accuracy of both baselines was evaluated by comparing the actual depth of a
+calibration chessboard to the reconstructed distances. Plotting the
+reconstructed distance against the actual distance at distances from 0 to 8
+meters (Figure ~\ref{fig:stereo-dist}) confirms this analysis. At short
+distances, the narrow stereo's dead zone of 0.9 m is substantially less than
+the wide stereo's dead zone of 1.6 m. As distances increase beyond 3 meters,
+however, the narrow stereo becomes much less accurate than the wide stereo.
 
-% 5. Point correspondances: SSD BM on the CPU or SAD BM on the GPU?
-% TODO: FIGURE: Sample reconstructed point cloud
-% TODO: Discussion of parameter selection
-% TODO: Statistical outlier detection using PCL.
 \subsection{Reconstruction Algorithm}
-\label{sec:stereo-correspond}
+\label{sec:stereo-algo}
 Due to the use of ROS as the basis for the Navigator's software architecture
 (Section ~\ref{sec:robot}), the actual stereo reconstruction is done using the
-standard \texttt{stereo\_image\_proc} ROS node. This node implements real-time
-calibrated stereo by rectifying the images, applying a texture-enhancing
-filter, and using a sum-of-squared difference (SSD) block-matching algorithm to
-point correspondences. This disparity map is then converted into a
-three-dimensional point cloud in the cameras' coordinate frame using the
-calibration parameters.
+standard \texttt{stereo\_image\_proc} ROS node. Before being processed for
+point correspondances, the pair of input images is rectified, regions of low
+texture are masked out, and a Sobel filter is applied to amplify texture
+~\cite{stereo}. Each pixel in the left image is matched to the most similar
+pixel in the corresponding row in the right image using a sum-of-squared
+difference (SSD) block-matching algorithm ~\cite{stereo}, producing that
+pixel's disparity. This disparity is then converted to a three-dimensiona point
+using the camera's intrinsic parameters.
 
-\subsection{Error Analysis}
-% TODO: How!?
+While more efficient than the graph-cut based alternatives, ~\cite{stereo} the
+SSD block-matching algorithm implemented in the ROS
+\texttt{stereo\_image\_proc} is still extremely computationally intensive.
+Considering that the narrow and wide baselines have a great deal of overlap,
+much of this computation is wasted: many of the three-dimensional points will
+be duplicated. Quickly alternating between the two baselines, or
+\textit{baseline multiplexing}, reduces the computational load of the
+trinocular stereo system to nearly the same as the binocular equivalent. In
+practice, baseline multiplexing allows the entire vision system to process
+images at approximately 10 Hz.
 
 \section{Lane Tracking}
 \label{sec:line}
@@ -267,7 +261,8 @@ is delimited by a three inch wide line painted on the grass or asphalt.
 Robustly identifying and tracking these lane boundary lines is a non-trivial
 problem that has been the primary cause of disqualifications in previous years
 of competitions. For example, 28 out of 29 competitors were disqualified before
-time elapsed in the 2010 Intelligent Ground Vehicle Competition.
+time elapsed in the 2010 Intelligent Ground Vehicle Competition
+~\cite{igvc_results10}.
 
 The algorithm discussed below is a modified version of the algorithm used by
 MIT's entry into the DARPA Grand Challenge. In this algorithm, a color image
@@ -276,8 +271,7 @@ of the image (Section ~\ref{sec:line-color}). The grayscale output of the color
 space transformation is then filtered using a matched pulse-width filter
 (Section ~\ref{sec:line-filter}) and compressed with non-maximal supression
 (Section ~\ref{sec:line-max}). These local maxima are then transformed into
-the world coordinate frame using the robot's estimated state and are tracked
-over time through model fitting (Section ~\ref{sec:line-model}).
+the world coordinate frame and are directly used for navigation.
 
 \begin{figure*}
 	\subfloat[Original Image]{
@@ -299,8 +293,17 @@ over time through model fitting (Section ~\ref{sec:line-model}).
 
 % 1. Color space transformation
 \subsection{Color Space Transformation}
-% TODO
-
+Using \textit{a priori} knowledge that the lines are white, the first step
+towards effectively isolating them from their surroundings is to convert the
+rectified color image into a monochromatic color space where white is
+amplified. Because white is inheriently of high intensity and low saturation,
+the hue-saturation-value (HSV) color space is a natural choice. If the original
+image, $I_{orig}$, has the 8-bit HSV channels $H(x,y)$, $S(x, y)$, and $V(x,
+y)$, define the pre-processed image $I_{pre}$ to be
+\begin{equation*}
+	I_{pre}(x, y) = \min\left\{255 - S(x, y), V(x, y)\right\}
+\end{equation*}
+for each pixel $(x, y)$ in $I_{orig}$.
 
 % 2. Creating and using a matched pulse-width filter (!)
 \subsection{Matched Pulse-Width Filter}
