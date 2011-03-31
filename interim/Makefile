@@ -36,7 +36,9 @@ all : $(TARGET).pdf
 clean :
 	$(RM) $(TRASH) $(GEN_FIGURES)
 
-%.pdf : %.tex
+%.pdf : %.tex %.bib
+	latex -interaction=nonstopmode $(basename $<)
+	bibtex $(basename $<)
 	latex -interaction=nonstopmode $(basename $<)
 	latex -interaction=nonstopmode $(basename $<)
 	dvipdf $(basename $<)
