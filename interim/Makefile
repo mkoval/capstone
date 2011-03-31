@@ -12,7 +12,8 @@ FIGURES =                             \
           line-orig.eps               \
           line-pre.eps                \
           line-filter.eps             \
-          line-max.eps
+          line-max.eps                \
+          line-sketch.eps
 TRASH   = $(TARGET).aux               \
           $(TARGET).log               \
           $(TARGET).dvi               \
@@ -42,6 +43,9 @@ clean :
 
 $(GEN_DIR)/%.eps : figures/%.plt $(GEN_DIR)
 	gnuplot $<
+
+$(GEN_DIR)/%.eps : figures/%.eps $(GEN_DIR)
+	cp $< $@
 
 $(GEN_DIR)/%.eps : figures/%.png $(GEN_DIR)
 	convert -background white $< $@
