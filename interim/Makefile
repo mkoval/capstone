@@ -1,16 +1,20 @@
 TARGET  = interim
-FIGURES = sync-img.eps                \
+FIGURES =                             \
+          robot-software-all.eps      \
+          robot-software-vision.eps   \
+          sync-img.eps                \
           unsync-img.eps              \
           sync-scope.eps              \
           unsync-scope.eps            \
-          robot-software-all.eps      \
-          robot-software-vision.eps   \
-          stereo-disparity-narrow.eps \
-          stereo-disparity-wide.eps   \
-          stereo-pointcloud.eps
-TRASH   = $(TARGET).aux             \
-          $(TARGET).log             \
-          $(TARGET).dvi             \
+          stereo-dist.eps             \
+          stereo-both.eps             \
+          line-orig.eps               \
+          line-pre.eps                \
+          line-filter.eps             \
+          line-max.eps
+TRASH   = $(TARGET).aux               \
+          $(TARGET).log               \
+          $(TARGET).dvi               \
           $(TARGET).pdf
 
 GEN_DIR     = include
@@ -36,12 +40,13 @@ clean :
 	dvipdf $(basename $<)
 
 $(GEN_DIR)/%.eps : figures/%.plt $(GEN_DIR)
-	#gnuplot $<
-	touch $@
-	echo "WARNING: gnuplot disabled"
+	gnuplot $<
 
 $(GEN_DIR)/%.eps : figures/%.png $(GEN_DIR)
 	convert -background white $< $@
+
+$(GEN_DIR)/%.eps : figures/%.jpg $(GEN_DIR)
+	convert $< $@
 
 $(GEN_DIR)/%.eps : figures/%.dot $(GEN_DIR)
 	dot -Teps -o$@ $<
