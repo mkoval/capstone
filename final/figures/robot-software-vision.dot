@@ -1,0 +1,37 @@
+digraph G {
+	size    = "12.0,8.0";
+
+	node [
+		shape    = "box",
+		style    = "rounded",
+		fontname = "Helvetica"
+	];
+
+	subgraph vision {
+		node [ color = black ];
+
+		camera_left         [ label = "Left Camera"        ];
+		camera_center       [ label = "Center Camera"      ];
+		camera_right        [ label = "Right Camera"       ];
+		camera_sync         [ label = "Synchronizer"       ];
+		narrow_stereo_proc  [ label = "Narrow Stereo"      ];
+		wide_stereo_proc    [ label = "Wide Stereo"        ];
+		line_detection_proc [ label = "Line Detector"      ];
+		line_tracking_proc  [ label = "Line Tracker"       ];
+		obj_recog_proc      [ label = "Object Recognition" ];
+	}
+
+	// Stereo
+	camera_left         -> camera_sync;
+	camera_center       -> camera_sync [ weight = 100 ];
+	camera_right        -> camera_sync;
+	camera_sync         -> narrow_stereo_proc;
+	camera_sync         -> wide_stereo_proc [ weight = 100 ];
+
+	// Lane Tracking
+	camera_right        -> line_detection_proc [ weight = 100 ];
+	line_detection_proc -> line_tracking_proc;
+
+	// Object Recognition
+	camera_right        -> obj_recog_proc;
+}
