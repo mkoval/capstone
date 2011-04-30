@@ -256,17 +256,70 @@ trinocular stereo system to nearly the same as the binocular equivalent. In
 practice, baseline multiplexing allows the entire vision system to process
 images at approximately 10 Hz.
 
-\subsection{Error Analysis}
-\label{sec:stereo-error}
-After calibrated with the ROS \texttt{camera\_calibration} package, the
-accuracy of both baselines was evaluated by comparing the actual depth of a
-calibration chessboard to the reconstructed distances. Plotting the
-reconstructed distance against the actual distance at distances from 0 to 8
-meters (Figure ~\ref{fig:stereo-dist}) confirms this analysis. At short
-distances, the narrow stereo's dead zone of 0.9 m is substantially less than
-the wide stereo's dead zone of 1.6 m. As distance increases beyond 3 meters,
-however, the narrow stereo becomes much less accurate and the wide stereo is
-superior.
+\subsubsection{Ground Plane Detection}
+\label{sec:soft-stereo-ground}
+When travelling over uneven terrain such as grass, the position and orientation
+of the cameras can change relative to the ground as the robot moves. Compounded
+by perspective projection, the effect of this movement is greatly detrimental
+to algorithms that rely on knowledge of the ground plane, such as stereo
+obstacle detection (Section ~\ref{sec:soft-stereo-od}) and line detection
+(Section ~\ref{sec:soft-line}). Analysis of recorded video shows that grass and
+asphalt are sufficiently textured to produce a fairly dense disparity map.
+Using the stereo reconstruction algorithm described in Section
+~\ref{sec:soft-stereo}, these disparities can be converted to three-dimensional
+points that lie on the ground plane.
+
+Assuming that the ground is perfectly flat, a sufficient number of these points
+can be used to fit a plane model to the stereo data using the Random Sample and
+Concensus (RANSAC) algorithm. Unlike least-squares estimation and other primitive
+model-fititing algorithms, RANSAC is an iterative algorithm that \textit{randomly
+samples} the data to find a model that has minimizes minimizes the model error
+for some \textit{concensus set} of inliers. Making use of the assumption that the
+data set may contain outliers and assuming that the ground plane is the most
+dominant plane in the image, it can be found by using RANSAC to fit the model
+$ax + by + cz + d = 0$ while minimizing the distance between each inlier point
+and the plane,
+\begin{equation*}
+	D(P) = \frac{|ax + by + cz + d|}{\sqrt{a^2 + b^2 + c^2}}.
+\end{equation*}
+
+When run for a sufficient number of iterations, RANSAC classifies all obstacle
+points as outliers and produces an extremely robust estimation of the ground
+plane. Unforutnately, the quality of the ground plane quickly diminishes as the
+number of true inlier points decreases. To reject denegerate fits, planes that
+have too few inliers or differ too greatly from a fixed default are rejected
+as invalid. In such cases, the fixed default is used as a fallback to allow
+the rest of the vision pipeline to continue as normal.
+
+\subsubsection{Obstacle Detection}
+\label{sec:soft-stereo-od}
+Once the ground plane has been found and the inlier points have been removed,
+the remainder of the image primarily consists of obstacle points mixed with
+false positives caused by mismatched point correspondances. As the Navigator
+uses a path planner that does not deal with uncertaintanty, these false
+positives must be removed before the detected obstacles are added to the
+occupancy grid. This is especially important when the ground deviates from a
+flat plane: some regions may be incorrectly detected as obstacle.
+
+Originally developed for off-road environments over rugged terrain, Manduchi et
+al. developed a stereo obstacle detection algorithm that does not require an
+explicit model of the ground plane. This algorithm scans the stereo disparity
+map from bottom-right to top-left and matches each pixel with a set of zero or
+more \textit{compatible} points. Reconstructed point $P_2$ is compatible with
+$P_1$ if and only if $P_2$ is in the truncated cone centered at $P_1$, with
+minimum height $H_{min}$, maximum height $H_{max}$, and internal angle
+$\theta$. Parameter $H_{min}$ is the minimum height of an obstacle, $H_{max}$
+is the minimum separation between distinct obstacles, and $\theta$ is the
+maximum ground slant.
+
+Using the definition of point compatability, two points are said to belong to
+the same obstacle if either: (1) the points are compatible or (2) there exists
+a chain of compatible linking the two points. Using a \textit{disjoint-sets}
+data structure (also known as a \textit{find-union} data structure), the
+reconstructed point cloud is partitioned into obstacles as point
+compatabilities are tested. Once the input point cloud is split into obstacles,
+obstacles that contain a sufficient number of points are projected onto the
+occupancy map that is used for navigation.
 
 \section{Lane Tracking}
 \label{sec:line}
@@ -289,6 +342,20 @@ is then filtered using a matched pulse-width filter (Section
 coordinate frame and are directly used for navigation ~\cite{huang_thesis}
 ~\cite{huang_paper}.
 
+\subsection{Error Analysis}
+\label{sec:stereo-error}
+After calibrated with the ROS \texttt{camera\_calibration} package, the
+accuracy of both baselines was evaluated by comparing the actual depth of a
+calibration chessboard to the reconstructed distances. Plotting the
+reconstructed distance against the actual distance at distances from 0 to 8
+meters (Figure ~\ref{fig:stereo-dist}) confirms this analysis. At short
+distances, the narrow stereo's dead zone of 0.9 m is substantially less than
+the wide stereo's dead zone of 1.6 m. As distance increases beyond 3 meters,
+however, the narrow stereo becomes much less accurate and the wide stereo is
+superior.
+
+% TODO: Discuss the two wheel cameras.
+
 \begin{figure*}[t]
 	\centering
 	\subfloat[Original Image]{
@@ -307,6 +374,30 @@ coordinate frame and are directly used for navigation ~\cite{huang_thesis}
 	\caption{Intermediate stages of the line detection algorithm.}
 	\label{fig:line-all}
 \end{figure*}
+
+\subsection{Extrinsic Calibration}
+\label{sec:line-extrinsic}
+While the addition of two wheel cameras greatly expands the Navigator's field
+of view, the images are only useful if they are captured in a known coordinate
+frame. As the stereo camera is calibrated against the LIDAR, the extrinsic
+calibration of the wheel cameras can be simplified to finding their pose
+relative to the stereo camera. Assuming a planar calibration checkerboard can
+be accurately tracked simultaneously in both images, each pair of frames gives
+point correspondances between the two images.
+
+For each point correspondance $p_{i,1} \leftrightarrow p_{i,2}$, the relationship
+between three-dimensional world coordinates (expressed with respect to the first
+camera coordinate frame) and image coordinates is
+\begin{align*}
+	\tilde{p}_{i,1} = M_{int,1} P \\
+	\tilde{p}_{i,2} = M_{int,2} T \tilde{P},
+\end{align*}
+where $T$ is the extrinsic relationship between the two camera coordinate frames
+and $\tilde{\cdot}$ indicates the use of homogeneous coordinates. Combining the
+two equations gives an expression where $T$ is the only free variable:
+\begin{equation*}
+	M_{int,2} \tilde{p}_{i,2} = T M_{int,1} \tilde{p}_{i,1}.
+\end{equation*}
 
 \subsection{Color Space Transformation}
 \label{sec:line-color}
@@ -423,13 +514,7 @@ extremely high quality reconstruction while the robot is moving, giving it the
 rich three-dimensional information required for path planning. Applying a
 matched pulse-width filter to detect the lines bordering the field successfully
 corrects for the effects of perspective transform and reliably detects both
-horizontal and vertical lines in the image. 
-
-\section{Future Work}
-\label{sec:future}
-With the high quality stereo point cloud produced by baseline multiplexing, the next step towards autonomaty is the detection of obstacles in the point cloud by fitting a ground plane to the image. Any points that are sufficiently above the ground plane are assumed to be obstacles and are treated as such by the navigation algorithm. This computed ground plane can then be used as input to the line detection algorithm, increasing its robustness by using sensor data to improve its idea of the ground plane. With this improvement to the line detection algorithm, the detected lines can be fitted with lines or bicubic splines and more precisely tracked over time.
-
-Even with these improvements, both stereo reconstruction and line detection will be unable to detect flat obstacles such as simulated potholes and flags. A number of photos of these obstacles will be used as training data to a object recognition algorithm, which will be trained to detect the obstacles that are missed by both stereo and line detection
+horizontal and vertical lines in the image.
 
 \section{Current Trends in Robotics}
 \label{sec:econ}
