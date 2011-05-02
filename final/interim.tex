@@ -6,7 +6,7 @@
 \usepackage{subfig}
 
 \title{Vision-Based Autonomous Ground Vehicle Navigation}
-\date{March 31, 2011}
+\date{May 2, 2011}
 \author{
 	Michael Koval \\
 	mkoval@eden.rutgers.edu \\
@@ -20,121 +20,165 @@
 \label{sec:intro}
 % 1. Overall description of IGVC
 The Intelligent Ground Vehicle Competition (IGVC) is an international
-collegiate robotics competition that tasks teams of undergraduate students to
-design, build, and program a fully autonomous mobile ground vehicle.
-Specifically, a successful entry must be capable of navigating through a narrow
-obstacle course, traveling between  global positioning system (GPS) scattered
-throughout a field, and responding to Joint Architecture for Unmanned Systems
-(JAUS) messages ~\cite{igvc11}.
+collegiate robotics competition that tasks each team to design,
+build, and program a fully autonomous mobile ground vehicle.  Each successful
+entry must autonomously navigate through an outdoor obstacle course using only
+the sensors and computing power on-board the robot. As per the offical rules,
+the competition is split into three parts: (1) navigating through a narrow
+obstacle course delimited by painted white lines, (2) traveling between global
+positioning system (GPS) waypoints scattered throughout a large field, and
+(3) responding to Joint Architecture for Unmanned Systems (JAUS) messages to
+autonomous control the robot ~\cite{igvc11}.
 
 % 2. Importance of Perception
-In each of these tasks, the robot is provided with only the destination
-way point and has no a priori no knowledge of the course's topology. Safely
-reaching the goal without crossing a course boundary or hitting an obstacle
-requires that the robot both build a map of its environment and use the map to
-plan through drivable regions to the destination. This is further complicated
-by the use of only narrow, white painted lines to delimit the course boundaries
-and the addition of a large variety of road obstacles to obstruct the path,
-including cones, barriers, potholes, and switchbacks
-~\cite{igvc11}.
+For each of these tasks, the robot is provided with only the GPS coordinates of
+a destination way point and has knowledge of the course's topology. Without a
+priori knowledge of the course boundaries and obstacles, navigating to the
+destination requires that the robot build a map of its environment in
+real-time. Using this map, the robot can plan a path through the drivable
+regions of the course towards the final destination, avoiding obstacles and
+avoiding the course boundaries at all costs. While the accuracy requirements
+for the  perception and localization algorithms used to build a global map map
+are significantly higher than simpler techniques, navigating with no high-level
+view of the environment is much less effective.
 
 % 3. Overview
-Finding these obstacles has historically been accomplished using a combination
-of a scanning laser range finder (LIDAR) and computer vision to build a local
-map of nearby obstacles and lines.  Before discussing specific algorithms for
-computing this information, Section ~\ref{sec:robot} provides a brief
-introduction to the hardware and software in use on the Rutgers Navigator:
-Rutgers University's 2011 IGVC entry. The remainder of this is split into two
-major sections: the use of stereo vision for obstacle detection (Section
-~\ref{sec:stereo}) and the monocular image processing used to to track the
-course boundary lines (Section ~\ref{sec:line}). Finally, Section
-~\ref{sec:future} addresses planned improvements to the vision system and
-Section ~\ref{sec:econ} discusses how robotics can assist in the recovery from
-major environmental disasters, such as the recent earthquake off the cost of
-Japan.
+Adding obstacles to the robot's internal representation of the world is
+accomplished by merging the output of a scanning laser range finder (LIDAR) and
+a custom stereo camera. In addition to identifying road obstacles, a successful
+entry must also employ monocular image processing techniques to identify the
+painted white lines that mark the course boundaries. Before discussing specific
+obstacle and line detection algorithms, Section ~\ref{sec:robot} provides a
+brief introduction to the hardware and software powering the Rutgers Navigator,
+Rutgers University's entry into the 2011 IGVC.  The remainder of this paper is
+split into two major sections: stereo reconstruction (Section
+~\ref{sec:stereo}) for obstacle detection and monocular image processing
+(Section ~\ref{sec:line}) for detecting the course boundary lines (Section
+Finally, Section ~\ref{sec:econ} discusses the global impact of robotics: how
+robots can assist in the recovery from major environmental disasters, such as
+the recent earthquake off the cost of Japan.
 
 \section{Rutgers Navigator}
 \label{sec:robot}
 % 1. Brief discussion of mechanical design
 Designed specifically for rugged outdoor use and modularity, the Rutgers
-Navigator is constructed entirely out of 80/20 extrusion and custom-machined
-aluminum stock. This provides a strong, light\footnote{Approximately 100 lb
-empty and 150 lb fully loaded.} frame that is much easier to modify than the
-equivalent welded steel frame. This chassis is supported by three wheels: two
-powered front wheels that are mounted on a wish bone suspension for improved
-stability and free-spinning rear caster chosen specifically to reduce friction
-while turning.
+Navigator (Figure ~\ref{fig:robot-photo}) is constructed entirely out of 80/20
+extrusion and custom-machined aluminum stock. This provides a strong,
+light\footnote{Approximately 100 lb empty and 150 lb fully loaded.} frame that
+is much easier to modify than a conventional welded steel frame. This chassis
+is supported by three wheels: two powered front wheels that are mounted on a
+wish bone suspension for improved stability and free-spinning rear caster
+chosen specifically to reduce friction while turning.
 
 \begin{figure}
 	\center
+	% TODO: Update Photo
+	% TODO: sensor rendering
 	\includegraphics[width=\linewidth]{include/robot-photo}
-	\caption{Rutgers Navigator robot}
+	\caption{
+		Rutgers Navigator. The front of the robot is equipped with three stereo
+		stereo cameras on the front of the robot, and one camera located above
+		each front wheel (not visible).
+	}
 	\label{fig:robot-photo}
 \end{figure}
 
 % 2. Sensing capabilities
 \subsection{Sensing Capabilities}
 \label{sec:robot-sensors}
-Each of the drive motors that attached to the drive wheels are equipped with
-internal hall-effect quadrature encoders to measure wheel speed and a current
-sensor to monitor power consumption. The local odometry information captured by
-the wheel encoders is combined with the data produced by a nine-axis inertial
-measurement unit (IMU) that includes an accelerometer, gyroscope, and magnetic
-compass to estimate the robot's motion. Conversely, the robot's absolute
-position is found using a high-end Novatel differential global positioning
-system (DGPS) that is accurate within 50 cm under normal operation and 10 cm
-when using OmniStar's correction service.
+Each of the four drive motors attached to the powered front wheels is equipped
+with an internal hall-effect quadrature encoder to measure wheel speed and a
+current sensor to monitor power consumption. The local odometry information
+captured by the wheel encoders is combined with the data produced by a
+nine-axis inertial measurement unit (IMU) to estimate the robot's motion.
+Between the wheel encoders, accelerometer, gyroscope, and magnomiter, the
+Navigator has access to a wealth of inertial data about its motion.
+Unfortunately, all of these sensors share a common flaw: the tendancy to drift
+over time by accumulating correlated error. Without frequent zeroing the
+Navigator's position estimate to a known location, this type of localization
+quickly becomes too inaccurate for long-term mapping.
+
+To correct for the encoder and IMU drift, the Navigator uses a differential
+global positioning system (DGPS) to measure its position in a globally fixed
+coordinate frame. Using publically available differential correction signals
+provided by the United States Coast Guard, the high-end Novatel DGPS on the
+Navigator is capable of estimating the robot's position anywhere on the Earth
+within 50 cm.  Combined with OmniStar's professional DGPS correction service,
+the Novatel DGPS's accuracy increases to approximately 10 cm: a localization
+error that is insignificant compared to the size of the robot. By fusing the
+DGPS and the inertial position estimates with an enhanced Kalman filter, the
+Navigator will both have an accurate estimate of its absolute position and its
+relative motion over time.
 
 As was discussed in Section ~\ref{sec:intro}, precise knowledge of the robot's
-position is not sufficient to successfully complete the challenges. Obstacles
-in the robot's environment are detected using a Hokuyo LIDAR and the custom
-trinoculur stereo vision system that is discussed in detail in Section
-~\ref{sec:stereo}. Combining the planar point cloud captured by the LIDAR with
-the full three-dimensional information produced by stereo camera results in an
-aggregate point cloud with both the field of view and granularity necessary to
-successfully avoid obstacles.
+position is not sufficient to perform well in any of the IGVC challenges. To
+detect obstacles in its environment, the Navigator uses the combination of a
+high-end Hokuyo scanning laser rangefinder (LIDAR) and a custom trinocular
+stereo camera that is discussed in detail in Section ~\ref{sec:stereo}.
+Combining the high-resolution planar data returned by the Hokuyo LIDAR with the
+stereo reconstruction of the scene, the navigator can take advantage of the
+best features of both technologies: the Hokuyo's 270 degree horizontal field of
+view and the stereo cameras' 75 degree vertical field of view. In addition to
+the Hokuyo LIDAR and trinocular stereo camera, an additional angled camera is
+mounted above each front wheel to identify painted boundary lines that cannot
+be seen by the stereo cameras.
 
 \subsection{Software Architecture}
 \label{sec:robot-software}
-Interaction between the robot's individual software components is implemented
+Interaction between the robot's individual software components is managed
 using the Robot Operating System (ROS), a framework developed by Willow Garage
 to promote code reuse in robotics. Besides providing a common interface to
 libraries such as OpenCV and PointCloud Library (PCL), ROS encourages the
 separation of software into a graph of loosely-coupled \textit{nodes} that
 communicate over TCP/IP sockets. Because each node \textit{subscribes} to its
 inputs and \textit{publishes} its outputs with no global knowledge of the
-system, it is possible to reuse nodes without ever modifying their internals.
+system, it is possible to reuse nodes without ever modifying their internal
+structure.
 
 \begin{figure}
 	\centering
+	% TODO: update this image
 	\includegraphics[width=\linewidth]{include/robot-software-vision}
 	\caption{Computer vision software subsystem.}
 	\label{fig:robot-vision}
 \end{figure}
 
-Using the concept of a node to model the flow of data through the computer
-vision subsystem produces the graph shown in Figure ~\ref{fig:robot-vision}.
-Within this graph, there are three distinct processing pipelines: stereo vision,
-monocular lane tracking, and monocular object recognition. As its name
-suggests, the \textit{stereo vision} pipeline (Section ~\ref{sec:stereo} uses
-triplets of synchronized images to generate a three-dimensional point cloud
-later used to identify obstacles. The monocular \textit{line tracking} (Section
-~\ref{sec:line}) pipeline identifies white boundary lines in each input image
-and tracks their positions relative to the robot over time. Finally, the
-\textit{object recognition} pipeline identifies purely visual targets and
-obstacles such as ``simulated potholes''\footnote{Ellipses placed on the grass
-to simulate real potholes.} and target flags.
+Figure ~\ref{fig:robot-vision} shows an overview of the flow of data between
+nodes in the computer vision subsystem. Within this graph of nodes, there are
+two distinct pipelines: stereo vision and monocular lane tracking. As its name
+suggests, the \textit{stereo vision} pipeline (Section ~\ref{sec:stereo}) uses
+triplets of synchronized images from the front stereo camera to generate a
+three-dimensional point cloud of obstacles. The monocular \textit{line
+tracking} (Section ~\ref{sec:line}) pipeline, conversely, processes images from
+the left stereo camera and the two wheel cameras to find any white painted
+lines that are in the Navigator's field of view. Detected lines are projected
+into three-dimensional space and are directly added to the gobal navigation
+grid as boundary obstacles.
 
 \section{Stereo Vision}
 \label{sec:stereo}
-Unlike the Hokuyo LIDAR which produces a planar point cloud, stereo vision
-produces a true three-dimensional representation of the world. For stereo
-reconstruction to work on a moving robot without major changes in the baseline,
-the cameras must be synchronized (Section ~\ref{sec:stereo-sync}). Once the
-Navigator's three cameras were synchronized, their baselines were selected
-(Section ~\ref{sec:stereo-mux}) and the cameras were placed in a custom
-polycarbonate case. Once calibrated, the three cameras were used for stereo
-reconstruction via baseline multiplexing (Section ~\ref{sec:stereo-algo}).
+Unlike a laser rangerfinder, such as the Hokuyo UTM-30LN that was discussed in
+Section ~\ref{sec:robot}, stereo vision is a passive sensor that reconstructs a
+three-dimensional scene using two or more standard cameras placed at different
+locations in space. By matching corresponding points between images captured by
+the two cameras and using knowledge of their relative positions in space (i.e.
+the \textit{baseline}), it is possible to completely reconstruct a three-dimensional
+scene. While fairly straightforward with stationary cameras in a static scene,
+using stereo vision on a moving platform poses many more problems.
+
+Before discussing the actual scene reconstruction, Section
+~\ref{sec:stereo-sync} discusses the process of \textit{hardware
+synchronization} the Navigator's trinocular stereo camera. This guarantees that
+the baseline remains constant even when the robot is driving at high speeds and
+allows stereo vision to reliably work on a moving platform. Assuming that the
+cameras are rigidly mounted and synchronized, Section ~\ref{sec:stereo-mux}
+discusses the selection of a trinocular stereo system with a 10 cm
+\textit{narrow} baseline and 20 cm \textit{wide} baseline the \textit{baseline
+multiplexing} that fuses the data into a single reconstructed point cloud.
+Using the combined point cloud, Section ~\ref{sec:stereo-algo} describes the
+base stereo reconstruction algorithm used for triangulation and Section
+~\ref{sec:stereo-od} details the post-processing processing steps needed to
+identify obstacles in the reconstructed point cloud.
 
 \begin{figure*}[t]
 	\centering
@@ -166,41 +210,49 @@ reconstruction via baseline multiplexing (Section ~\ref{sec:stereo-algo}).
 \subsection{Synchronization}
 \label{sec:stereo-sync}
 Stereo vision on a mobile robot is a non-trivial problem that has traditionally
-required custom machine vision hardware with two or more hardware-synchronized
-cameras. Because standard stereo reconstruction assumes that the images from
-each camera are captured of a fixed scene from multiple viewpoints, any motion
-that occurs between the cameras capturing frames is interpreted as an
-unexpected change in the system's baseline. This change in baseline invalidates
-the system's extrinsic calibration\footnote{Capturing images at 30 Hz while
-moving at 10 mph could change the baseline by up to 7 cm.}, causing the quality
-of the rectification to decrease and the distances to be distorted by the
-robot's velocity ~\cite{unsync}.
+expensive, hardware-synchronized machine-vision cameras. Because standard
+stereo reconstruction assumes that the images from the left and right cameras
+are captured from a common scene, any motion that occurs between the left and
+right cameras capturing frames is equivalent to a change in the stereo camera's
+baseline. This change in baseline invalidates the system's extrinsic
+calibration\footnote{Capturing images at 30 Hz while moving at 10 mph could
+change the baseline by up to 7 cm.}, causing the quality of the rectification
+to decrease and the distances to be distorted by the robot's velocity
+~\cite{unsync}.
 
-Hardware synchronization has been traditionally limited to specialized cameras,
-such as the Bumblebee series of stereo cameras. Thankfully, the inexpensive
-Playstation Eye camera is built on the high-end OmniVision OV7720 chipset,
-which can be hardware-synchronized using the exposed frame clock input
-(\texttt{FSIN}) and output (\texttt{VSYNC}) pins ~\cite{omnivision}. By
-shorting one camera's (the \textit{master}) \texttt{VSYNC} pin to the other
-cameras' (the \textit{slaves}) \texttt{FSIN} pins, the cameras are forced to
-share a common clock. To reduce the risk of a large potential difference from
-damaging the cameras, each camera was also modified to share a common ground.
+Hardware synchronization, the process of forcing two or more cameras to share a
+common hardware clock, has been traditionally limited to to professional stereo
+visio systems such as Point Grey's Bumblebee product line.  Thankfully, the
+inexpensive Playstation Eye camera is built on the same high-end OmniVision
+OV7720 chipset that is comparable to those found in many machine vision
+cameras. These cameras can be hardware-synchronized using the exposed frame
+clock input (\texttt{FSIN}) and output (\texttt{VSYNC}) pins
+~\cite{omnivision}. By shorting one camera's \texttt{VSYNC} pin to the other
+cameras' \texttt{FSIN} pins, the cameras are forced to share a common clock. To
+reduce the risk of a difference in ground potentials damaging the OV7720's
+delicate circuitry, each camera was also modified to share a common ground.
 
-This hardware synchronization guarantees that the cameras capture images
+This hardware synchronization guarantees that all three cameras capture images
 simultaneously, but does not guarantee that the frames will remain synchronized
-after the USB transfers to the computer. Making direct use of the Video4Linux
-kernel module, synchronization was achieved by fuzzy-matching of the the USB
-transfer timestamps\footnote{\texttt{https://github.com/mkoval/stereo\_webcam}}
-assigned to the memory-mapped I/O by the kernel driver.
+after USB transfer to the computer. Making direct use of the Video4Linux
+kernel module, reliable synchronization was achieved by enabling memory-mapped
+I/O for image transfering and fuzzy-matching the Linux kernel's USB transfer
+timestamps\footnote{\texttt{https://github.com/mkoval/stereo\_webcam}}. Because
+this matching algorithm uses the Linux kernel's USB transfer timestamps instead
+of those measured in user-space, this simple algorithm is extremely robust to
+periodic desynchronizations caused by dropped frames and increased USB latency.
 
 Hardware synchronization was verified by probing each camera's \texttt{VSYNC}
 pin with an oscilloscope (Figures ~\ref{fig:stereo-sync-hard1} and
-~\ref{fig:stereo-sync-hard2}) and confirming that all three clocks were in
-phase. The software synchronization was additionally verified by simultaneously
+~\ref{fig:stereo-sync-hard2}) and confirming that all three clocks are in
+phase. The software synchronization was further verified by simultaneously
 capturing images of a millisecond resolution timer (Figures
-~\ref{fig:stereo-sync-soft1} and ~\ref{fig:stereo-sync-soft2}. Mounted in a
-custom polycarbonate case, three of these hardware-synchronized Playstation Eye
-cameras serve as the backbone of the Navigator's trinocular vision system.
+~\ref{fig:stereo-sync-soft1} and ~\ref{fig:stereo-sync-soft2} on all three
+synchronized cameras. Since the times exactly match after synchronization and
+differ by several milliseconds on the original unsynchronized cameras, the
+camera synchronization is clearly a success. These three hardware-synchronized
+Playstation Eye cameras are mounted in a custom polycarbinate case on the front
+of the Navigator and serve as a custom trinocular stereo camera.
 
 \subsection{Baseline Selection}
 \label{sec:stereo-mux}
@@ -257,69 +309,70 @@ practice, baseline multiplexing allows the entire vision system to process
 images at approximately 10 Hz.
 
 \subsubsection{Ground Plane Detection}
-\label{sec:soft-stereo-ground}
+\label{sec:stereo-ground}
 When travelling over uneven terrain such as grass, the position and orientation
 of the cameras can change relative to the ground as the robot moves. Compounded
 by perspective projection, the effect of this movement is greatly detrimental
 to algorithms that rely on knowledge of the ground plane, such as stereo
-obstacle detection (Section ~\ref{sec:soft-stereo-od}) and line detection
-(Section ~\ref{sec:soft-line}). Analysis of recorded video shows that grass and
-asphalt are sufficiently textured to produce a fairly dense disparity map.
-Using the stereo reconstruction algorithm described in Section
-~\ref{sec:soft-stereo}, these disparities can be converted to three-dimensional
-points that lie on the ground plane.
+obstacle detection (Section ~\ref{sec:stereo-od}) and line detection (Section
+~\ref{sec:line}). Analysis of recorded video reconstructed by the
+block-matching algorithm described in Section ~\ref{sec:stereo-alog} shows that
+grass and asphalt are sufficiently textured to produce a dense disparity map.
 
-Assuming that the ground is perfectly flat, a sufficient number of these points
-can be used to fit a plane model to the stereo data using the Random Sample and
-Concensus (RANSAC) algorithm. Unlike least-squares estimation and other primitive
-model-fititing algorithms, RANSAC is an iterative algorithm that \textit{randomly
-samples} the data to find a model that has minimizes minimizes the model error
-for some \textit{concensus set} of inliers. Making use of the assumption that the
-data set may contain outliers and assuming that the ground plane is the most
-dominant plane in the image, it can be found by using RANSAC to fit the model
-$ax + by + cz + d = 0$ while minimizing the distance between each inlier point
-and the plane,
-\begin{equation*}
-	D(P) = \frac{|ax + by + cz + d|}{\sqrt{a^2 + b^2 + c^2}}.
-\end{equation*}
+Assuming that the ground is a perfect plane, a sufficient number of
+reconstructed ground points is described by the model $ax + by + cz + d =
+0$, where $(x, y, z)$ is the reconstructed point and $a, b, c, d$ are model
+parameters. Directly using the  output of the stereo reconstruction algorithm
+as input, the Random Sample and Consensus (RANSAC) algorithm was used to fit
+the ground plane. Unlike least-squares estimation and other primitive
+model-fitting algorithms, RANSAC is a robust iterative algorithm that
+\textit{randomly samples} the data to find a model that has minimizes minimizes
+the model error for some \textit{concensus set} of inliers. Assuming that the
+ground plane is the dominant plane in the image and that RANSAC is run for a
+suficient number of iterations, RANSAC classifies points on the ground plane as
+inliers and all other points as outliers.
 
-When run for a sufficient number of iterations, RANSAC classifies all obstacle
-points as outliers and produces an extremely robust estimation of the ground
-plane. Unforutnately, the quality of the ground plane quickly diminishes as the
-number of true inlier points decreases. To reject denegerate fits, planes that
-have too few inliers or differ too greatly from a fixed default are rejected
-as invalid. In such cases, the fixed default is used as a fallback to allow
-the rest of the vision pipeline to continue as normal.
+Unfortunately, the assumption that the ground plane is dominant is not entirely
+accurate in a competition setting. When the robot is facing a nearby obstacle,
+RANSAC may inappropriately fit a plane to obstacle points instead of ground
+points. Since such a situation would rotate the ground plane by approximately
+90 degrees, a manually-tuned decision tree is used to reject poor models. By
+eliminating planes with too few inliers, too high of an angle, and too big of
+a vertical offset from the robot, the majority of false ground plane detections
+are eliminated.
 
 \subsubsection{Obstacle Detection}
-\label{sec:soft-stereo-od}
+\label{sec:stereo-od}
 Once the ground plane has been found and the inlier points have been removed,
-the remainder of the image primarily consists of obstacle points mixed with
-false positives caused by mismatched point correspondances. As the Navigator
-uses a path planner that does not deal with uncertaintanty, these false
-positives must be removed before the detected obstacles are added to the
-occupancy grid. This is especially important when the ground deviates from a
-flat plane: some regions may be incorrectly detected as obstacle.
+the remainder of the point cloud is assumed to be a mix of obstacle points
+and outliers caused by incorrect point correspondances. As the Navigator uses
+a path planner that does not explicitely deal with uncertaintanty, these false
+positives must be removed before detected obstacles are added to the
+occupancy grid. 
 
-Originally developed for off-road environments over rugged terrain, Manduchi et
-al. developed a stereo obstacle detection algorithm that does not require an
-explicit model of the ground plane. This algorithm scans the stereo disparity
-map from bottom-right to top-left and matches each pixel with a set of zero or
-more \textit{compatible} points. Reconstructed point $P_2$ is compatible with
-$P_1$ if and only if $P_2$ is in the truncated cone centered at $P_1$, with
-minimum height $H_{min}$, maximum height $H_{max}$, and internal angle
-$\theta$. Parameter $H_{min}$ is the minimum height of an obstacle, $H_{max}$
-is the minimum separation between distinct obstacles, and $\theta$ is the
-maximum ground slant.
+Assuming that correctly detected obstacles dominate the remaining points, the
+obstacle detection problem is reduced to an outlier detection problem on a
+three-dimensional point cloud. Properly reconstructed points that belong to an
+object are likely to form large clustered of points in the point cloud. If one
+of these points is selected at random, one would expect its $k$ nearest
+neighbors to have a low standard deviation of $x$, $y$, and $z$ coordinates. By
+removing points that sufficiently deviate from their nearest neighbors,
+spurious detections are completely eliminated and the resultant point cloud can
+be directly added to the global occupancy grid ~\cite{rusu2008towards}.
 
-Using the definition of point compatability, two points are said to belong to
-the same obstacle if either: (1) the points are compatible or (2) there exists
-a chain of compatible linking the two points. Using a \textit{disjoint-sets}
-data structure (also known as a \textit{find-union} data structure), the
-reconstructed point cloud is partitioned into obstacles as point
-compatabilities are tested. Once the input point cloud is split into obstacles,
-obstacles that contain a sufficient number of points are projected onto the
-occupancy map that is used for navigation.
+\subsection{Error Analysis}
+\label{sec:stereo-error}
+After the stereo cameras were calibrated using a modified version of the ROS
+camera calibration toolkit, the depths reported by both stereo baselines were
+measured and compared to ground truth. Measuring the ground truth data from 0
+to 8 meters (Figure ~\ref{fig:stereo-dist}), the narrow stereo pair's dead
+zone of 0.9 meters is approximately half the size of the wide stereo pair's
+dead zone of 1.6 m. As distance increases beyond 3 m, the wide baseline begins
+to surpass the narrow baseline in accuracy. In additition to manual measurements
+with a calibration chessboard, these results were confirmed by using the Hokoyu
+LIDAR for ground-truth distances. Even when objects are several meters away,
+the depths calculated by the stereo vision system match those measured by
+the LIDAR within several inches.
 
 \section{Lane Tracking}
 \label{sec:line}
@@ -331,30 +384,25 @@ previous years of competitions. For example, 28 out of 29 competitors were
 disqualified failing to move, leaving the course, or striking an obstacle
 before five minutes time limit elapsed in the 2010 IGVC.
 
-The algorithm discussed below is a modified version of the algorithm used by
-Massachusetts Institute of Technology's entry into the DARPA Grand Challenge.
-In this algorithm, a color image of the course undergoes a color space
-transformation to emphasize white regions of the image (Section
+To avoid repeating the errors made by teams in previous years, the Navigator
+simultaneously runs the full line detection algorithm on images from three
+cameras: the left stereo camera, the left wheel camera, and the right
+wheel camera. The front-facing camera camera provides the long-term knowledge
+of the course shape necessary for path planning, while the left and right
+wheel cameras track the lines on either side of the robot. By fusing the
+line detetion results from all three cameras, the Navigator's field of view
+is nearly a full 180 degrees.
+
+The detection algorithm run on each image is a modified version of the
+algorithm used by Massachusetts Institute of Technology's entry into the DARPA
+Grand Challenge.  In this algorithm, a color image of the course undergoes a
+color space transformation to emphasize white regions of the image (Section
 ~\ref{sec:line-color}). The grayscale output of the color space transformation
 is then filtered using a matched pulse-width filter (Section
 ~\ref{sec:line-filter}) and compressed with non-maximal suppression (Section
 ~\ref{sec:line-max}). These local maxima are then transformed into the world
 coordinate frame and are directly used for navigation ~\cite{huang_thesis}
 ~\cite{huang_paper}.
-
-\subsection{Error Analysis}
-\label{sec:stereo-error}
-After calibrated with the ROS \texttt{camera\_calibration} package, the
-accuracy of both baselines was evaluated by comparing the actual depth of a
-calibration chessboard to the reconstructed distances. Plotting the
-reconstructed distance against the actual distance at distances from 0 to 8
-meters (Figure ~\ref{fig:stereo-dist}) confirms this analysis. At short
-distances, the narrow stereo's dead zone of 0.9 m is substantially less than
-the wide stereo's dead zone of 1.6 m. As distance increases beyond 3 meters,
-however, the narrow stereo becomes much less accurate and the wide stereo is
-superior.
-
-% TODO: Discuss the two wheel cameras.
 
 \begin{figure*}[t]
 	\centering
@@ -371,7 +419,11 @@ superior.
 	\subfloat[Non-Maximal Suppression]{
 		\includegraphics[width=0.45\linewidth]{include/line-max}
 	}
-	\caption{Intermediate stages of the line detection algorithm.}
+	\caption{
+		Intermediate stages of the line detection algorithm. Each stage of
+		processing removes filters unnecessary data from the image and
+		simplifies the remainder of the processing pipeline.
+	}
 	\label{fig:line-all}
 \end{figure*}
 
@@ -381,31 +433,41 @@ While the addition of two wheel cameras greatly expands the Navigator's field
 of view, the images are only useful if they are captured in a known coordinate
 frame. As the stereo camera is calibrated against the LIDAR, the extrinsic
 calibration of the wheel cameras can be simplified to finding their pose
-relative to the stereo camera. Assuming a planar calibration checkerboard can
-be accurately tracked simultaneously in both images, each pair of frames gives
-point correspondances between the two images.
+relative to the stereo camera. Using standard computer vision techniques,
+assume the corners of a checkerboard can be accurately located in the image and
+have coordinates $(p_1, p_2, \cdots, p_n)$. Starting at the top left corner,
+each of these points is assigned corresponding three-dimensional coordinates
+$(P_1, P_2, \cdots, P_3)$ in a coordiante frame that is oriented such that the
+x and y axes are along the rows and columns of the chessboard and the z axis is
+orthogonal to the surface of the chessboard.
 
-For each point correspondance $p_{i,1} \leftrightarrow p_{i,2}$, the relationship
-between three-dimensional world coordinates (expressed with respect to the first
-camera coordinate frame) and image coordinates is
-\begin{align*}
-	\tilde{p}_{i,1} = M_{int,1} P \\
-	\tilde{p}_{i,2} = M_{int,2} T \tilde{P},
-\end{align*}
-where $T$ is the extrinsic relationship between the two camera coordinate frames
-and $\tilde{\cdot}$ indicates the use of homogeneous coordinates. Combining the
-two equations gives an expression where $T$ is the only free variable:
+Using the camera's intrinsic matrix and the definition of perspective projection,
+the relationship
 \begin{equation*}
-	M_{int,2} \tilde{p}_{i,2} = T M_{int,1} \tilde{p}_{i,1}.
+	\tilde{p}_i = M_{int} T \tilde{P}_i
 \end{equation*}
+must hold for each point, where $T$ is the transformation from the chessboard
+frame to the camera frame. Expanding the matrix multiplication $T P_i$, this
+can be rewritten as $M_{int}^{-1} \tilde{p}_i = T \tilde{P}_i$ and $T$ is found
+using least-squares estimation
+
+For extrinsic camera calibration, this procedure is repeated once for each camera
+on a set of synchronized images. Since the same chessboard is seen in both views,
+$T_1$ is the transformation from the chessboard to camera 1 and $T_2$ is the
+transformation from the same chessboard to camera 2. Because transformations are
+expressed in a common coordinate frame, the transformation from camera 2 to camera
+1 is simply $T_{12} = T_1 T_2^{-1}$. Using this calibration technique to solve for
+the position of the left and right wheel cameras relative to the center stereo camera,
+it is then possible to accurately fuse three-dimensional coordinates generated by all
+three cameras and to superimpose them on the navigation costmap.
 
 \subsection{Color Space Transformation}
 \label{sec:line-color}
-Using \textit{a priori} knowledge that the lines are white, the first step
-towards effectively isolating them from their surroundings is to convert the
-rectified color image into a monochromatic color space where white is
-amplified. Because white is inherently of high intensity and low saturation,
-the hue-saturation-value (HSV) color space is a natural choice. If the original
+Using a priori knowledge that the lines are white, the first step towards
+effectively isolating them from their surroundings is to convert the rectified
+color image into a monochromatic color space where white is amplified. Because
+white is inherently of high intensity and low saturation, the
+hue-saturation-value (HSV) color space is a natural choice. If the original
 image, $I_{orig}$, has the 8-bit HSV channels $H(x,y)$, $S(x, y)$, and $V(x,
 y)$, define the pre-processed image $I_{pre}$ to be
 \begin{equation*}
@@ -415,13 +477,15 @@ for each pixel $(x, y)$ in $I_{orig}$.
 
 \subsection{Matched Pulse-Width Filter}
 \label{sec:line-filter}
-Because the lines on the course are known to be uniformly three inches wide, an
-obvious approach for isolating them from other objects is to use a digital
-\textit{pulse-width filter} that is of the same width. Unfortunately, the
-effects of perspective projection mean that the apparent width of lines in the
-image depend upon their distance from the camera. To obtain useful output, such
-a filter must be properly \textit{matched} to expected width of the line at
-each point in the image ~\cite{huang_thesis} ~\cite{huang_paper}.
+In addition to the lines' color, the 2011 IGVC rules specify that all painted
+lines will be uniformly three inches wide. Using this knowledge of the line's
+width, an  obvious approach for isolating them from other objects is to use a
+digital \textit{pulse-width filter} that responds strongly to objects with the
+same width as a line. Unfortunately, effect of perspective projection causes
+the apparent width of lines in an image depend upon their distance from the
+camera and position in three-dimensional space. To obtain meaningful output,
+such a filter must be properly \textit{matched} to expected width of the line
+for each point in the input image ~\cite{huang_thesis} ~\cite{huang_paper}.
 
 Calculating this width requires knowledge of the three-dimensional point
 corresponding to each pixel in the image. Assuming that the ground plane is
@@ -462,7 +526,6 @@ symmetric (i.e. $\delta_{LL} = \delta{LR}$ and $\delta_{BL} = \delta_{BR}$) for
 the horizontal filter kernel. The vertical filter is asymmetric and shifted due
 to the effect of perspective projection.
 
-
 Once the four widths have been projected into the image, a filter kernel is
 constructed such that each of the negative \textit{supports} sums to $-0.5$
 and the central \textit{pulse} sums to $+1.0$. This causes the filter to have
@@ -496,14 +559,17 @@ approximately 15\% of the filter's maximum response.
 
 \subsection{Error Analysis}
 \label{sec:line-error}
-This algorithm is largely rooted in physical constants, it is relatively
-sensitive to the ground plane having an incorrect orientation. Constructing the
-matched pulse-width filters succeeds even with large variations in the ground
-plane, but those filters no longer match the width of the line in the image.
-Even worse, the detected line points in the world appear at the wrong distance
-from the image. Tested on both simulated data and real data, the algorithm
-appears very effective at identifying lines even in noisy environments (e.g.
-the parking lot in Figure ~\ref{fig:line-all}).
+
+Largely because this algorithm is rooted in physical constants, and has few
+arbitrary thresholds, this line detection algorithm works equally well in
+simulation and on real data. 
+
+Constructing the matched pulse-width filters succeeds even with large
+variations in the ground plane, but those filters no longer match the width of
+the line in the image.  Even worse, the detected line points in the world
+appear at the wrong distance from the image. Tested on both simulated data and
+real data, the algorithm appears very effective at identifying lines even in
+noisy environments (e.g.  the parking lot in Figure ~\ref{fig:line-all}).
 
 \section{Conclusion}
 \label{sec:conclusion}
@@ -521,53 +587,79 @@ horizontal and vertical lines in the image.
 % 1. Search and Rescue
 The recent Japanese earthquake and tsunami was one of the worlds' most
 devastating natural disasters. While the Japanese people's efficient response
-captivated international news, it rapidly became clear old-school search and
-rescue methods are much less effective on the national and international scale.
-Each volunteer that climbs through the debris generated by the earthquake and
-tsunami is capable of moving only a few miles per hour and is limited to those
-areas that are deemed sufficiently safe to walk.
+captivated international news, it rapidly became clear manual search and rescue
+is not feasible on a large scale. Every volunteer slowly climbs through debris
+and collapsed buildings, moving a few miles per hour at the most. Even worse,
+the search and rescue volunteers are restricted to areas that have been deemed
+sufficiently safe to walk: many of which pose as much risk to the rescuers as
+to the rescuees.
 
-One robotic solution to the search an rescue problem are miniature tank-like
-robots that are capable of scaling piles of debris ~\cite{search}. Unlike a
-human, these search and rescue robots are equipped with infrared cameras and
-carbon dioxide sensors to detect the presence of humans that may not be visible
-to the naked eye ~\cite{search}. Even better, this type of robot is capable of
-completely eliminating the need for rescue workers to enter dangerous areas:
-the robot can be remotely deployed and teleoperated at a safe distance by the
-emergency workers. While these robots are not revolutionary, they do have a
-past history of success in mine rescues ~\cite{mine} and on September 11th
-~\cite{sept11}.
+One robotic solution to this search and rescue problem is use a miniature
+tank-like robot to search debris for survivors ~\cite{search}. While still
+controlled by a human teleoperator, these search and rescue robots are equipped
+with infrared cameras and carbon dioxide sensors to detect the presence of
+humans that would otherwise go unnoticed by the naked eye ~\cite{search}. Even
+better, this type of robot completely eliminates the need for rescue workers to
+enter dangerous areas: the robot can be remotely deployed and controled from a
+safe distance without putting any emergency workers to risk. While these robots
+are not revolutionary, they do have a past history of success in mine rescues
+~\cite{mine} and on September 11th ~\cite{sept11}.
 
-Inexpensive, ``disposable'' robots, are not limited to such precautions. One
-research group at the University of California at Berkeley has developed just
-that: an extremely inexpensive ``mechanical cockroach'' that is capable of
-fitting through small cracks in rubble ~\cite{cockroach}. Using the same
-principles as swarm robotics, using a number of inexpensive robots can be
-advantagous over using a single expensive robot. This is especially the case in
-search and rescue: covering a wide area and penetrating the rubble in all
-directions to search for survive rs is much more important than having superior
-sensing equipment.
+While these robots remove human rescue workers from harms way, each robot is
+too costly to be deployed in bulk. Replacing one large robot with a large
+number of inexpensive, ``disposable'', robots is a better solution for
+exploring dangerous environments such as collapsed building. One research group
+at the University of California at Berkeley has developed just that: an
+extremely inexpensive ``mechanical cockroach'' that is capable of fitting
+through small cracks in rubble ~\cite{cockroach}. Based on the principles of
+swarm robotics, using a large number of simple robots can give a cheaper and
+more robust system than a small numberof expensive robots. This is especially
+the case in search and rescue: covering a wide area and being robust to extreme
+environmental conditions is much more important than having high-accuracy
+sensing equipment. Even if a number of the robots are destroyed, the remaining
+robots are completely independent and can continue to aid the rescue effort.
+
+For either of these techniques to become practical, the next major efficiency
+improvement will be from replacing the human teleoperator with a fully
+autonomous control system. This is especially important when using swarm
+robotic rescue system: while it may be feasible to have a dedicate teleoperator
+for a few smaller robots, it is completely infeasible for a large-scale swarm
+system. Once the necessary advances have been made in producing inexpensive
+mobile robots, a completely autonomous swarm robotics rescue system is ideal
+solution for search and rescue. By requiring little supervision, rescue workers
+can focus on tasks that robots cannot easily automate.
 
 % 2. Infastructure Evaluation and Repair
-Once the search and rescue response is complete, a country struck by a natural
-disaster must begin repairing the damage its buildings and infrastructure. With
-caused in natural disaster of this magnitude and continuing aftershocks, it is
-extremely dangerous to send engineers into damaged structures. Instead of the
-engineers directly inspecting the damage, a robot can be used to position high
-resolution cameras near the damage and allow the engineers to inspect the
-damage from a safe distance ~\cite{gym}. Using ground robots to inspect damage
-is only the beginning: there are already plans to use quadrotors to inspect
-the upper floors of buildings and submersible vehicles to inspect bridges.
+Search and rescue is only the first step in disaster recovery. Once the
+immediate disaster response is complete, the affected governments must begin
+the long and arduous process of repairing and replacing their damaged
+infastructure. With the extent of damaged caused by a natural disaster the
+scale of the Japanese earthquake, it is not safe to open roads, bridges, or
+tunnels until they have been inspected and deemed structurally stable. This,
+unfortunately, means that engineers must enter the compromised (and potentially
+dangerous) structure to search for damage. Just like search and rescue, this is
+a natural task for a teleoperated robot.
 
-Robots are now starting to replace humans that are in dangerous our high-risk
-environments. By keeping the human operator out of harms way and outfitting the
-robot with task-specific tools (such as an infrared camera to detect body
-heat), the operator is able to focus entirely on the mission without worrying
-about personal safety. Unfortunately, this means that there still must be an
-operator present: fully autonomous robots are still too unreliable to use for
-this type of critical mission. Hopefully additionally research will make full
-autonomy feasible before the next disaster of this caliber strikes: it is much
-better to put a robot in harms way than a human.
+Instead of the engineers directly inspecting the damage, a robot can be
+remotely controlled from a safe distance away from the damaged structure. Even
+better, the inspection robot can carry sensors that a human cannot. These might
+include a high-resolution camera ~\cite{gym} for inspecting damage to beams, a
+scanning laser rangefinder for building a three-dimensional model of the
+damage, or even a sensor package for measuring the concentration of airborn
+contaminents. This type of remote inspection is crucial for disasters such as
+the Deepwater Horizon, where manual inspection of the disaster would be
+completely impossible.
+
+% Conclusion
+With robots just beginning to replace humans in dangerous and high-risk
+enironments, the potential for future improvement is clearly visible. Using
+teleoperated robots keeps the human operators out of harms way and gives
+themaccess to task-specific sensors and equipment that would otherwise be
+unavailable. Without worrying about his or her personal safety, the operator is
+able to devote his or her full attention to the mission and focus on making the
+rescue effort continue smoothly. In the future, a human operator may not be
+needed at all: full autonomy will automate the monotonous drudgery of disaster
+recovery and let humans focus on the tasks that are most important.
 
 \section{Acknowledgments}
 This project would not have been possible without the support of Dr. Predrag
