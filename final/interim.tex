@@ -523,7 +523,7 @@ of the line yields an intersection point of
 Using the new-found knowledge of point $P$, the length of an arbitrary real-world
 vector projected into the image at point $p$ is
 \begin{equation}
-	\delta = ||M_{int} \tilde{P} - M_{int} (\tilde[P} + \Delta)||_2
+	\delta = ||M_{int} \tilde{P} - M_{int} (\tilde{P} + \Delta)||_2
 	\label{eqn:line-width}
 \end{equation}
 where $\delta$ is the image distance corresponding to a change in world
@@ -616,24 +616,25 @@ controlled by a human, these search and rescue robots are equipped with
 infrared cameras and carbon dioxide sensors to detect the presence of humans
 that would otherwise go unnoticed ~\cite{search}. Even better,
 this type of robot completely eliminates the need for rescue workers to enter
-dangerous areas: itjl can be remotely deployed and controled from a safe
+dangerous areas: it can be remotely deployed and controled from a safe
 distance without putting any emergency workers to risk. While these robots are
-not revolutionary, they do have a past history of success in mine rescues
+not revolutionary, they do have a past history of success for mine rescues
 ~\cite{mine} and on September 11th ~\cite{sept11}.
 
 While these robots remove human rescue workers from harms way, each robot is
 too costly to be deployed in bulk. Replacing one large robot with a large
 number of inexpensive, ``disposable'', robots is a better solution for
-exploring dangerous environments such as collapsed building. One research group
-at the University of California at Berkeley has developed just that: an
+exploring dangerous environments such as collapsed buildings. One research
+group at the University of California at Berkeley has developed just that: an
 extremely inexpensive ``mechanical cockroach'' that is capable of fitting
 through small cracks in rubble ~\cite{cockroach}. Based on the principles of
 swarm robotics, using a large number of simple robots can give a cheaper and
-more robust system than a small numberof expensive robots. This is especially
+more robust system than a small number of expensive robots. This is especially
 the case in search and rescue: covering a wide area and being robust to extreme
-environmental conditions is much more important than having high-accuracy
-sensing equipment. Even if a number of the robots are destroyed, the remaining
-robots are completely independent and can continue to aid the rescue effort.
+environmental conditions is much more important than access to expensive,
+high-accuracy sensing equipment. Even if a number of the robots are destroyed,
+the remaining robots are completely independent and can continue to aid the
+rescue effort.
 
 For either of these techniques to become practical, the next major efficiency
 improvement will be from replacing the human teleoperator with a fully
@@ -641,20 +642,21 @@ autonomous control system. This is especially important when using swarm
 robotic rescue system: while it may be feasible to have a dedicate teleoperator
 for a few smaller robots, it is completely infeasible for a large-scale swarm
 system. Once the necessary advances have been made in producing inexpensive
-mobile robots, a completely autonomous swarm robotics rescue system is ideal
-solution for search and rescue. By requiring little supervision, rescue workers
-can focus on tasks that robots cannot easily automate.
+mobile robots, a completely autonomous swarm robotics rescue system will be the
+ideal solution for search and rescue: it is inexpensive, requires little
+supervision, and allows humans to focus on tasks that are not as easy to
+automate.
 
 % 2. Infastructure Evaluation and Repair
 Search and rescue is only the first step in disaster recovery. Once the
 immediate disaster response is complete, the affected governments must begin
 the long and arduous process of repairing and replacing their damaged
-infastructure. With the extent of damaged caused by a natural disaster the
+infastructure. With the extent of damaged caused by a natural disaster on the
 scale of the Japanese earthquake, it is not safe to open roads, bridges, or
-tunnels until they have been inspected and deemed structurally stable. This,
-unfortunately, means that engineers must enter the compromised (and potentially
-dangerous) structure to search for damage. Just like search and rescue, this is
-a natural task for a teleoperated robot.
+tunnels until they have been fully inspected and deemed structurally stable.
+This, unfortunately, means that engineers must enter the compromised (and
+potentially dangerous) structure to search for damage. Just like search and
+rescue, this is a natural task for a teleoperated robot.
 
 Instead of the engineers directly inspecting the damage, a robot can be
 remotely controlled from a safe distance away from the damaged structure. Even
@@ -663,19 +665,19 @@ include a high-resolution camera ~\cite{gym} for inspecting damage to beams, a
 scanning laser rangefinder for building a three-dimensional model of the
 damage, or even a sensor package for measuring the concentration of airborn
 contaminents. This type of remote inspection is crucial for disasters such as
-the Deepwater Horizon, where manual inspection of the disaster would be
+the Deepwater Horizon, where manual inspection of the disaster site would be
 completely impossible.
 
 % Conclusion
 With robots just beginning to replace humans in dangerous and high-risk
 enironments, the potential for future improvement is clearly visible. Using
-teleoperated robots keeps the human operators out of harms way and gives
-themaccess to task-specific sensors and equipment that would otherwise be
+teleoperated robots keeps the human operators out of harms way and gives them
+access to task-specific sensors and equipment that would otherwise be
 unavailable. Without worrying about his or her personal safety, the operator is
 able to devote his or her full attention to the mission and focus on making the
-rescue effort continue smoothly. In the future, a human operator may not be
-needed at all: full autonomy will automate the monotonous drudgery of disaster
-recovery and let humans focus on the tasks that are most important.
+rescue effort continue as smoothly as possible. In the future, a human operator
+may not be needed at all: full autonomy will automate the monotonous drudgery
+of disaster recovery and let humans focus on the tasks that are most important.
 
 \section{Acknowledgments}
 This project would not have been possible without the support of Dr. Predrag
