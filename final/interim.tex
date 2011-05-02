@@ -257,16 +257,20 @@ of the Navigator and serve as a custom trinocular stereo camera.
 \subsection{Baseline Selection}
 \label{sec:stereo-mux}
 Selecting the optimal baseline for a stereo system is a balance of two
-opposing, but equally important, factors: field of view and precision.
+opposing, but equally important, factors: field of view and maximum range.
 Decreasing the baseline increases the shared field of view of the two cameras
-at the cost of less precise distance measurements. Conversely, increasing the
-baseline trades a decrease in field of view for better precision at each
-range. Using a trinocular system allows the software to select between
-two different baseilnes: a \textit{narrow} baseline that uses the left and
-center cameras and a \textit{wide} baseline that uses the left and right
-cameras. Using the trinocular Bumblebee3 Stereoscopic Camera as a model, the
-\textit{narrow stereo} baseline was set to 10 cm and the \textit{wide stereo}
-baseline was set to 20 cm.
+at the cost of a shorter maximum range. Conversely, increasing the baseline
+decreases the aggregate field of view, but yields an increased maximum range
+and better precision at each visible distance. Using a trinocular stereo system
+instead of a standard binocular system allows the software to get the
+advantages of two baselines with the addition of only one camera.
+
+The \textit{narrow} pair has a baseline of approximately 10 cm and uses the
+left and middle cameras. Conversely, the \textit{wide} pair has a baseline of
+approximately 20 cm and uses the left and right cameras. By using the narrow
+baselines for nearby points and the wide baseline for more distance points,
+this trinocular stereo system combines the small minimum range of the narrow
+baseline with the better accuracy and maximum range of the wide baseline.
 
 \begin{figure*}
 	\centering
@@ -293,53 +297,60 @@ point correspondences, the pair of input images is rectified, regions of low
 texture are masked out, and a Sobel filter is applied to amplify texture
 ~\cite{stereo}. Each pixel in the left image is matched to the most similar
 pixel in the corresponding row in the right image using a sum-of-squared
-difference (SSD) block-matching algorithm ~\cite{stereo}, producing that
-pixel's disparity. This disparity is then converted to a three-dimensional point
-using the camera's intrinsic parameters.
+difference (SSD) block-matching algorithm ~\cite{stereo} and the corresponding
+disparity is calculated.  This disparity is then converted to a
+three-dimensional point using the camera's intrinsic parameters.
 
 While more efficient than the graph-cut based alternatives, ~\cite{stereo} the
 SSD block-matching algorithm implemented in the ROS
-\texttt{stereo\_image\_proc} is still extremely computationally intensive.
-Considering that the narrow and wide baselines have a great deal of overlap,
-much of this computation is wasted: many of the three-dimensional points will
-be duplicates. Quickly alternating between the two baselines, or
-\textit{baseline multiplexing}, reduces the computational load of the
-trinocular stereo system to nearly the same as the binocular equivalent. In
-practice, baseline multiplexing allows the entire vision system to process
-images at approximately 10 Hz.
+\texttt{stereo\_image\_proc} is still extremely computationally intensive. With
+all three cameras set to a resolution of $640 \times 480$ and a frame rate of
+15 Hz, the stereo block-matching algorithm runs at approximately 10-12 Hz.
+While this is much slower than the 60 Hz maximum frame rate of the cameras, it
+is more than sufficient considering the rate at which the path planning
+algorithm executes.
 
 \subsubsection{Ground Plane Detection}
 \label{sec:stereo-ground}
 When travelling over uneven terrain such as grass, the position and orientation
 of the cameras can change relative to the ground as the robot moves. Compounded
-by perspective projection, the effect of this movement is greatly detrimental
-to algorithms that rely on knowledge of the ground plane, such as stereo
-obstacle detection (Section ~\ref{sec:stereo-od}) and line detection (Section
-~\ref{sec:line}). Analysis of recorded video reconstructed by the
-block-matching algorithm described in Section ~\ref{sec:stereo-alog} shows that
-grass and asphalt are sufficiently textured to produce a dense disparity map.
+by perspective projection, the effect of this movement is very detrimental to
+algorithms that rely on knowledge of the ground plane such as stereo obstacle
+detection (Section ~\ref{sec:stereo-od}) and the matched pulse-width filter
+used for line detection (Section ~\ref{sec:line}). Analysis of recorded video
+that has been processed by the above reconstruction algorithm shows that the
+block-matching algorithm described in Section ~\ref{sec:stereo-algo} detects
+sufficient texture on the ground to produce a dense disparity map.
 
-Assuming that the ground is a perfect plane, a sufficient number of
-reconstructed ground points is described by the model $ax + by + cz + d =
-0$, where $(x, y, z)$ is the reconstructed point and $a, b, c, d$ are model
-parameters. Directly using the  output of the stereo reconstruction algorithm
-as input, the Random Sample and Consensus (RANSAC) algorithm was used to fit
-the ground plane. Unlike least-squares estimation and other primitive
+Assuming that the ground is a perfect plane parameterized by $a$, $b$, $c$, and
+$d$, a large number of reconstructed points are described by the model
+\begin{equation}
+	ax + by + cz + d = 0,
+	\label{eq:stereo-ground}
+\end{equation}
+where $(x, y, z)$ are the reconstruction points position in three-dimensional
+space.
+
+Once stereo vision has reconstructed the three-dimensional scene in front of the
+Navigator, the Random Sample and Consensus (RANSAC) model-fitting algorithm is
+used to fit Equation ~\ref{eq:stereo-ground} to the ground plane. Unlike least-squares estimation and other primitive
 model-fitting algorithms, RANSAC is a robust iterative algorithm that
 \textit{randomly samples} the data to find a model that has minimizes minimizes
 the model error for some \textit{concensus set} of inliers. Assuming that the
 ground plane is the dominant plane in the image and that RANSAC is run for a
 suficient number of iterations, RANSAC classifies points on the ground plane as
-inliers and all other points as outliers.
+inliers and all other points, such as obstacles, as outliers.
 
-Unfortunately, the assumption that the ground plane is dominant is not entirely
-accurate in a competition setting. When the robot is facing a nearby obstacle,
-RANSAC may inappropriately fit a plane to obstacle points instead of ground
-points. Since such a situation would rotate the ground plane by approximately
-90 degrees, a manually-tuned decision tree is used to reject poor models. By
-eliminating planes with too few inliers, too high of an angle, and too big of
-a vertical offset from the robot, the majority of false ground plane detections
-are eliminated.
+Unfortunately, the assumption that the ground plane will dominant other planes
+in the image is only accurate if the region in front of the robot is relatively
+empty. When the robot is facing a nearby obstacle, RANSAC may inappropriately
+fit a plane to obstacle points instead of the non-existant ground points. Since
+such a situation would rotate the ground plane by approximately 90 degrees, a
+manually-tuned decision tree is used to reject poor fits. This decision tree
+eliminates models that have too few inliers, are at too high of an angle, or
+hae too large a vertical offset from the robot. Simulation and experimental
+testing using a heavily textured plane show that this decision tree eliminates
+the vast majority of false ground plane detections.
 
 \subsubsection{Obstacle Detection}
 \label{sec:stereo-od}
@@ -347,18 +358,22 @@ Once the ground plane has been found and the inlier points have been removed,
 the remainder of the point cloud is assumed to be a mix of obstacle points
 and outliers caused by incorrect point correspondances. As the Navigator uses
 a path planner that does not explicitely deal with uncertaintanty, these false
-positives must be removed before detected obstacles are added to the
-occupancy grid. 
+positives must be removed before detected obstacles are added to the map used
+for path planning.
 
 Assuming that correctly detected obstacles dominate the remaining points, the
-obstacle detection problem is reduced to an outlier detection problem on a
+obstacle detection problem is reduced to an outlier detection on a
 three-dimensional point cloud. Properly reconstructed points that belong to an
-object are likely to form large clustered of points in the point cloud. If one
-of these points is selected at random, one would expect its $k$ nearest
-neighbors to have a low standard deviation of $x$, $y$, and $z$ coordinates. By
-removing points that sufficiently deviate from their nearest neighbors,
-spurious detections are completely eliminated and the resultant point cloud can
-be directly added to the global occupancy grid ~\cite{rusu2008towards}.
+object are likely to form large clusters and outliers are likely to remain
+fairly isolated. If an obstacle point is selected at random, one would expect
+that the standard deviation of the $x$, $y$, and $z$ coordinates of its $k$
+nearest neighbors to be relatively low. For an isolated outlier, the same
+calculation would produce an abnormally high stadard deviation
+~\cite{rusu2008towards}. By repeating this process on every point and
+classifying all points with a sufficiently high standard deviation as outliers,
+spurious detections from poor point correspondances are completely eliminated
+~\cite{rusu2008towards}. Once outliers have been removed, the resultant point
+cloud can safely be added to the robot's internal map.
 
 \subsection{Error Analysis}
 \label{sec:stereo-error}
@@ -372,37 +387,39 @@ to surpass the narrow baseline in accuracy. In additition to manual measurements
 with a calibration chessboard, these results were confirmed by using the Hokoyu
 LIDAR for ground-truth distances. Even when objects are several meters away,
 the depths calculated by the stereo vision system match those measured by
-the LIDAR within several inches.
+the Hokuyo LIDAR within several inches.
 
 \section{Lane Tracking}
 \label{sec:line}
 For both the navigation and GPS challenges, the drivable region of the course
-is delimited by a three inch wide line painted on the grass or asphalt.
-Robustly identifying and tracking these lane boundary lines is an extremely
-difficult problem that has been the primary cause of disqualifications in
+is delimited by a three inch wide line painted on grass or asphalt.
+Robustly identifying and tracking these boundary lines is a
+difficult problem that has been the primary cause of disqualification in
 previous years of competitions. For example, 28 out of 29 competitors were
 disqualified failing to move, leaving the course, or striking an obstacle
 before five minutes time limit elapsed in the 2010 IGVC.
 
 To avoid repeating the errors made by teams in previous years, the Navigator
-simultaneously runs the full line detection algorithm on images from three
-cameras: the left stereo camera, the left wheel camera, and the right
-wheel camera. The front-facing camera camera provides the long-term knowledge
-of the course shape necessary for path planning, while the left and right
-wheel cameras track the lines on either side of the robot. By fusing the
-line detetion results from all three cameras, the Navigator's field of view
-is nearly a full 180 degrees.
+simultaneously runs an advanced line detection algorithm on images from three
+cameras: the center stereo camera, the left wheel camera, and the right wheel
+camera. The front-facing stereo camera provides the long-term knowledge of the
+course shape necessary for path planning, while the left and right insure that
+the Navigator does not inadvertantly cross a line while following a long-term
+path. By fusing the line detetion results from all three cameras, the
+Navigator's field of view is expanded from 75 degrees to nearly a full 180
+degrees.
 
-The detection algorithm run on each image is a modified version of the
-algorithm used by Massachusetts Institute of Technology's entry into the DARPA
-Grand Challenge.  In this algorithm, a color image of the course undergoes a
-color space transformation to emphasize white regions of the image (Section
-~\ref{sec:line-color}). The grayscale output of the color space transformation
-is then filtered using a matched pulse-width filter (Section
-~\ref{sec:line-filter}) and compressed with non-maximal suppression (Section
-~\ref{sec:line-max}). These local maxima are then transformed into the world
-coordinate frame and are directly used for navigation ~\cite{huang_thesis}
-~\cite{huang_paper}.
+The line detection algorithm run in parallel on each camera is a modified
+version of the algorithm used by Massachusetts Institute of Technology's entry
+into the DARPA Grand Challenge.  In this algorithm, a color image of the course
+first undergoes a color space transformation to emphasize white regions of the
+image (Section ~\ref{sec:line-color}). The grayscale output of the color space
+transformation is then filtered using a matched pulse-width filter (Section
+~\ref{sec:line-filter}) that eliminates lines of the incorrect width. Finally,
+the size of the output point cloud is compressed using non-maximal suppression
+(Section ~\ref{sec:line-max}) and the detected local maxima are transformed
+into the world coordinate frame to be directly used for navigation
+~\cite{huang_thesis} ~\cite{huang_paper}.
 
 \begin{figure*}[t]
 	\centering
@@ -433,13 +450,11 @@ While the addition of two wheel cameras greatly expands the Navigator's field
 of view, the images are only useful if they are captured in a known coordinate
 frame. As the stereo camera is calibrated against the LIDAR, the extrinsic
 calibration of the wheel cameras can be simplified to finding their pose
-relative to the stereo camera. Using standard computer vision techniques,
-assume the corners of a checkerboard can be accurately located in the image and
-have coordinates $(p_1, p_2, \cdots, p_n)$. Starting at the top left corner,
-each of these points is assigned corresponding three-dimensional coordinates
-$(P_1, P_2, \cdots, P_3)$ in a coordiante frame that is oriented such that the
-x and y axes are along the rows and columns of the chessboard and the z axis is
-orthogonal to the surface of the chessboard.
+relative to the stereo camera. Using a process common in calibration, a small
+chessboard is placed in the shared field of view of the two cameras. Each of
+the detected grid corners, $p_1, p_2, \cdots, p_n$ are assigned three-dimensional
+coordinates in a coordinate frame aligned with the chessboard: $P_1, P_2, \cdots
+P_n$.
 
 Using the camera's intrinsic matrix and the definition of perspective projection,
 the relationship
@@ -449,17 +464,17 @@ the relationship
 must hold for each point, where $T$ is the transformation from the chessboard
 frame to the camera frame. Expanding the matrix multiplication $T P_i$, this
 can be rewritten as $M_{int}^{-1} \tilde{p}_i = T \tilde{P}_i$ and $T$ is found
-using least-squares estimation
+using least-squares estimation.
 
-For extrinsic camera calibration, this procedure is repeated once for each camera
-on a set of synchronized images. Since the same chessboard is seen in both views,
+To calibrate one camera relative to second camera, this calibration procedure is
+repeated on a pair of synchronized frames. Since the same chessboard is seen in both views,
 $T_1$ is the transformation from the chessboard to camera 1 and $T_2$ is the
-transformation from the same chessboard to camera 2. Because transformations are
-expressed in a common coordinate frame, the transformation from camera 2 to camera
+transformation from the same chessboard to camera 2. Both transformations are
+expressed in a common coordinate frame and the transformation from camera 2 to camera
 1 is simply $T_{12} = T_1 T_2^{-1}$. Using this calibration technique to solve for
-the position of the left and right wheel cameras relative to the center stereo camera,
-it is then possible to accurately fuse three-dimensional coordinates generated by all
-three cameras and to superimpose them on the navigation costmap.
+the position of the left and right wheel cameras relative to the center stereo camera
+makes it possible to accurately transform coordinates generated in all three cameras
+into a common coordinate frame that can be used for navigation.
 
 \subsection{Color Space Transformation}
 \label{sec:line-color}
@@ -492,23 +507,23 @@ corresponding to each pixel in the image. Assuming that the ground plane is
 known and is parametrized by point $P$ and normal $n$, the three-dimensional
 point $P$ that corresponds to pixel $p$ satisfies both
 \begin{align*}
-	(P - P_0) \cdot n          &= 0 \\
-	\lambda M^{-1}_{int} p - P &= 0,
+	(P - P_0) \cdot n                  &= 0 \\
+	\lambda M^{-1}_{int} p - \tilde{P} &= 0,
 \end{align*}
 where $M_{int}$ is the camera's intrinsic matrix and $\lambda$ is an arbitrary
 constant.
 
-Solving for $\lambda$ results in a closed-form expression containing
-only known parameters. Substituting this value into the equation of the
-line yields an intersection point of
+Solving for $\lambda$ gives a closed-form expression expressed in terms of only
+known parameters Substituting this definition of $\lambda$e into the equation
+of the line yields an intersection point of
 \begin{equation*}
- 	P = \left(\frac{n \cdot P_0}{n \cdot M^{-1}_{int} p}\right) M^{-1}_{int} p.
+ 	P = \left(\frac{n \cdot \tilde{P}_0}{n \cdot M^{-1}_{int} p}\right) M^{-1}_{int} p.
 	\label{eqn:line-point}
 \end{equation*}
 Using the new-found knowledge of point $P$, the length of an arbitrary real-world
 vector projected into the image at point $p$ is
 \begin{equation}
-	\delta = ||M_{int} P - M_{int} (P + \Delta)||_2
+	\delta = ||M_{int} \tilde{P} - M_{int} (\tilde[P} + \Delta)||_2
 	\label{eqn:line-width}
 \end{equation}
 where $\delta$ is the image distance corresponding to a change in world
@@ -524,7 +539,8 @@ $\delta_{BL}$ and $\delta_{BR}$ correspond to the expected total width of the
 filter (including a dead zone around the line). Note that the filter is only
 symmetric (i.e. $\delta_{LL} = \delta{LR}$ and $\delta_{BL} = \delta_{BR}$) for
 the horizontal filter kernel. The vertical filter is asymmetric and shifted due
-to the effect of perspective projection.
+to perspective projection disproportionately elongating distances that are closer
+to the camera.
 
 Once the four widths have been projected into the image, a filter kernel is
 constructed such that each of the negative \textit{supports} sums to $-0.5$
@@ -569,7 +585,7 @@ variations in the ground plane, but those filters no longer match the width of
 the line in the image.  Even worse, the detected line points in the world
 appear at the wrong distance from the image. Tested on both simulated data and
 real data, the algorithm appears very effective at identifying lines even in
-noisy environments (e.g.  the parking lot in Figure ~\ref{fig:line-all}).
+noisy environments (e.g. the parking lot in Figure ~\ref{fig:line-all}).
 
 \section{Conclusion}
 \label{sec:conclusion}
@@ -589,20 +605,20 @@ The recent Japanese earthquake and tsunami was one of the worlds' most
 devastating natural disasters. While the Japanese people's efficient response
 captivated international news, it rapidly became clear manual search and rescue
 is not feasible on a large scale. Every volunteer slowly climbs through debris
-and collapsed buildings, moving a few miles per hour at the most. Even worse,
-the search and rescue volunteers are restricted to areas that have been deemed
-sufficiently safe to walk: many of which pose as much risk to the rescuers as
-to the rescuees.
+of collapsed buildings, moving a few miles per hour and putting his or her own
+life at risk. This means that rescue volunteers are restricted to areas that
+have been deemed sufficiently safe to walk: potentially denying access to some
+of the surviors who are in most urgent need of assistance.
 
-One robotic solution to this search and rescue problem is use a miniature
-tank-like robot to search debris for survivors ~\cite{search}. While still
-controlled by a human teleoperator, these search and rescue robots are equipped
-with infrared cameras and carbon dioxide sensors to detect the presence of
-humans that would otherwise go unnoticed by the naked eye ~\cite{search}. Even
-better, this type of robot completely eliminates the need for rescue workers to
-enter dangerous areas: the robot can be remotely deployed and controled from a
-safe distance without putting any emergency workers to risk. While these robots
-are not revolutionary, they do have a past history of success in mine rescues
+One solution to the search and rescue problem is to deploy teleoperated
+tank-like robots to search debris for survivors ~\cite{search}. While still
+controlled by a human, these search and rescue robots are equipped with
+infrared cameras and carbon dioxide sensors to detect the presence of humans
+that would otherwise go unnoticed ~\cite{search}. Even better,
+this type of robot completely eliminates the need for rescue workers to enter
+dangerous areas: itjl can be remotely deployed and controled from a safe
+distance without putting any emergency workers to risk. While these robots are
+not revolutionary, they do have a past history of success in mine rescues
 ~\cite{mine} and on September 11th ~\cite{sept11}.
 
 While these robots remove human rescue workers from harms way, each robot is
